@@ -1,0 +1,31 @@
+---
+create_files:
+  # Copying this from existing (working) files.  Reconsider later.
+  - owner:              'root'
+    group:              'staff'
+    mode:               '2755'
+    state:              'directory'
+    path:               '/usr/local/src'
+# I might want to set ownership of the source files to ansible and drop sudo for the build phase -- after the refactor and a good test.
+install_packages:
+  - 'libncurses5-dev'
+  - 'byacc'
+  - 'flex'
+unpack_tarballs:
+  - src:                "{{ role_path }}/files/source/nethack-360-src.tgz"
+    dest:               '/usr/local/src'
+    creates:            '/usr/local/src/nethack-3.6.0'
+scripts:
+  - script:             "{{ role_path }}/files/scripts/build_nethack_3.6.0"
+    creates:            '/usr/local/src/nethack-3.6.0/src/nethack'
+commands:
+  - command:            'make install'
+    chdir:              '/usr/local/src/nethack-3.6.0'
+    creates:            '/usr/local/games/lib/nethackdir/nethack'
+    user:               'root'
+install_files:
+  - owner:              'root'
+    group:              'root'
+    mode:               '0755'
+    src:                "{{ role_path }}/files/bin/nethack"
+    dest:               '/usr/local/bin/nethack'

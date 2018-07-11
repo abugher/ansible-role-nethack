@@ -1,0 +1,103 @@
+#!/bin/bash
+
+   nethack='/usr/local/games/nethack'
+ bones_dir='/usr/local/games/lib/nethackdir'
+   tmp_dir='/tmp/bones'
+   uidfile='/tmp/uidfile'
+   gidfile='/tmp/gidfile'
+remote_uid='995'
+remote_gid='992'
+
+
+function puke {
+  ret=$1
+  shift
+  echo "BLEAH:  ${@}"
+  exit $ret
+}
+
+
+mount_tmp_dir() {
+  login_gid=$( awk -F : "/^$USER:/"' {print $3}' /etc/passwd )
+  echo $login_gid | grep -qE '^[0-9]*$' || puke 1 "Invalid login UID:  ${login_uid}"
+  login_group=$( awk -F : "/:$login_gid:/"' {print $1}' /etc/passwd )
+  echo $login_group | grep -qE '^[a-zA-Z0-9\._][a-zA-Z0-9\._\-]*$' || puke 1 "Invalid login group:  ${login_group}"
+  echo "${USER}:${remote_uid}" > $uidfile
+  echo "${login_group}:${remote_gid}" > $gidfile
+  fusermount -u $tmp_dir 2>&1 >/dev/null
+  fusermount_ret=$?
+  if mountpoint $tmp_dir > /dev/null; then
+    puke $fusermount_ret "failed to unmount ${tmp_dir}"
+  fi
+  mkdir -p $tmp_dir || puke $? "failed to mkdir ${tmp_dir}"
+  sshfs \
+    -o idmap=file,uidfile=$uidfile,gidfile=$gidfile,reconnect \
+    cryptkeeper@neuronpointer.net:bones $tmp_dir || puke $? "failed to mount ${tmp_dir}"
+}
+
+
+upload_all_bones_files() {
+  upload_count=0
+  for bones_file in $(ls $bones_dir | grep '^bon') ; do
+    bones_file=$(echo $bones_file | sed 's/.*\///g')
+    mv $bones_dir/$bones_file $tmp_dir/$bones_file || puke $? "failed to move ${bones_file}"
+    echo "Uploaded: ${bones_file}"
+    let upload_count++
+  done
+  echo "Uploaded ${upload_count} bones files."
+}
+
+
+download_bones_files() {
+  available_count=$(ls $tmp_dir/ | wc -l)
+  # Get about half.
+  download_quota=$(( $available_count / 2 ))
+  # Get at least one.
+  if test 0 -eq $download_quota; then
+    download_quota=1
+  fi
+
+  download_count=0
+  for bones_file in $(ls $tmp_dir/ | sort -R); do
+    if test $download_count -ge $download_quota; then break; fi
+    bones_file=$(echo $bones_file | sed 's/.*\///g')
+    mv $tmp_dir/$bones_file $bones_dir/$bones_file || puke $? "failed to move ${bones_file}"
+    echo "Downloaded: ${bones_file}"
+    let download_count++
+  done
+  echo "Downloaded ${download_count} random bones files."
+}
+
+
+play() {
+  bones_count_before=$(ls -1 $bones_dir/bon* 2>/dev/null | wc -l)
+
+  $nethack
+
+  bones_count_after=$( ls -1 $bones_dir/bon* 2>/dev/null | wc -l)
+  bones_count_diff=$(( $bones_count_after - $bones_count_before ))
+}
+
+
+show_bones() {
+  case $bones_count_diff in
+    0)
+      echo "No new bones files."
+      ;;
+    1)
+      echo "I think you left a bones file."
+      ;;
+    *)
+      echo "Wow.  I think you left ${bones_count_diff} bones files.  That's weird."
+      ;;
+  esac
+}
+
+
+
+mount_tmp_dir
+upload_all_bones_files
+download_bones_files
+play
+show_bones
+upload_all_bones_files
