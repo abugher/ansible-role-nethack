@@ -12,15 +12,15 @@ install_packages:
   - 'byacc'
   - 'flex'
 unpack_tarballs:
-  - src:                "{{ role_path }}/files/source/nethack-360-src.tgz"
+  - src:                "{{ role_path }}/files/source/nethack-361-src.tgz"
     dest:               '/usr/local/src'
-    creates:            '/usr/local/src/nethack-3.6.0'
+    creates:            '/usr/local/src/nethack-3.6.1'
 scripts:
-  - script:             "{{ role_path }}/files/scripts/build_nethack_3.6.0"
-    creates:            '/usr/local/src/nethack-3.6.0/src/nethack'
+  - script:             "{{ role_path }}/files/scripts/build_nethack_3.6.1"
+    creates:            '/usr/local/src/nethack-3.6.1/src/nethack'
 commands:
   - command:            'make install'
-    chdir:              '/usr/local/src/nethack-3.6.0'
+    chdir:              '/usr/local/src/nethack-3.6.1'
     creates:            '/usr/local/games/lib/nethackdir/nethack'
     user:               'root'
 install_files:
