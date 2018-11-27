@@ -1,12 +1,16 @@
 #!/bin/bash
 
-   nethack='/usr/local/games/nethack'
- bones_dir='/usr/local/games/lib/nethackdir'
-   tmp_dir='/tmp/bones'
-   uidfile='/tmp/uidfile'
-   gidfile='/tmp/gidfile'
-remote_uid='995'
-remote_gid='992'
+     nethack='/usr/local/games/nethack'
+   bones_dir='/usr/local/games/lib/nethackdir'
+     tmp_dir='/tmp/bones'
+    lock_dir="${tmp_dir}/.write_lock"
+     uidfile='/tmp/uidfile'
+     gidfile='/tmp/gidfile'
+  remote_uid='995'
+  remote_gid='992'
+lock_timeout='10'
+bones_before='unset'
+ bones_after='unset'
 
 
 function puke {
@@ -27,70 +31,110 @@ mount_tmp_dir() {
   fusermount -u $tmp_dir 2>&1 >/dev/null
   fusermount_ret=$?
   if mountpoint $tmp_dir > /dev/null; then
-    puke $fusermount_ret "failed to unmount ${tmp_dir}"
+    puke $fusermount_ret "Failed to unmount:  ${tmp_dir}"
   fi
-  mkdir -p $tmp_dir || puke $? "failed to mkdir ${tmp_dir}"
+  mkdir -p $tmp_dir || puke $? "Failed to mkdir:  ${tmp_dir}"
   sshfs \
     -o idmap=file,uidfile=$uidfile,gidfile=$gidfile,reconnect \
-    cryptkeeper@neuronpointer.net:bones $tmp_dir || puke $? "failed to mount ${tmp_dir}"
+    cryptkeeper@neuronpointer.net:bones $tmp_dir || puke $? "Failed to mount:  ${tmp_dir}"
 }
 
 
 upload_all_bones_files() {
+  lock_tmp_dir
   upload_count=0
   for bones_file in $(ls $bones_dir | grep '^bon') ; do
     bones_file=$(echo $bones_file | sed 's/.*\///g')
-    mv $bones_dir/$bones_file $tmp_dir/$bones_file || puke $? "failed to move ${bones_file}"
+    mv $bones_dir/$bones_file $tmp_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
     echo "Uploaded: ${bones_file}"
     let upload_count++
   done
   echo "Uploaded ${upload_count} bones files."
+  unlock_tmp_dir
+}
+
+
+lock_tmp_dir() {
+  while true; do
+    while ! mkdir $lock_dir; do
+      echo "Waiting for write lock on shared bones location.  (Ctrl C to give up.)"
+      sleep 1
+      if rmdir $lock_dir > /dev/null; then
+        continue
+      fi
+      for pid_file in $lock_dir/*; do
+        pid=$(
+          echo $pid_file | sed 's/.*\.//g'
+        )
+        echo "Checking for process:  ${pid}"
+        if ps -p $pid; then
+          strike_count_name="pid_${pid}_strike_count"
+          strike_count="${!strike_count_name}"
+          if test $lock_timeout -le ${strike_count}; then
+            echo -n "Waited $timeout seconds for PID ${pid} on host $(cat $pid_file) -- maybe you should go kill that.  [then press enter] "
+            read response
+          fi
+          eval ${strike_count_name}=$(( strike_count + 1 ))
+        else
+          echo "Process ${pid} not found.  Removing stale lock file."
+          rm $pid_file || puke $? "Failed to remove stale PID file for process:  $pid"
+          continue
+        fi
+      done
+    done
+
+    echo $HOSTNAME > $lock_dir/pid.$$
+
+    if test -f $lock_dir/pid.$$; then
+      break
+    fi
+  done
+
+  echo "Shared bones location is locked."
+}
+
+
+unlock_tmp_dir() {
+  rm $lock_dir/pid.$$ || puke $? "Failed to remove PID file."
+  rmdir $lock_dir || puke $? "Failed to remove lock file."
+  echo "Shared bones location is unlocked."
 }
 
 
 download_bones_files() {
-  available_count=$(ls $tmp_dir/ | wc -l)
-  # Get about half.
+  lock_tmp_dir
+  available_count=$(ls $tmp_dir/ | grep ^bon | wc -l)
   download_quota=$(( $available_count / 2 ))
-  # Get at least one.
-  if test 0 -eq $download_quota; then
+  if test 1 -eq $available_count; then
     download_quota=1
   fi
 
   download_count=0
-  for bones_file in $(ls $tmp_dir/ | sort -R); do
+  for bones_file in $(ls $tmp_dir/ | grep ^bon | sort -R); do
     if test $download_count -ge $download_quota; then break; fi
-    bones_file=$(echo $bones_file | sed 's/.*\///g')
     mv $tmp_dir/$bones_file $bones_dir/$bones_file || puke $? "failed to move ${bones_file}"
     echo "Downloaded: ${bones_file}"
     let download_count++
   done
   echo "Downloaded ${download_count} random bones files."
+  unlock_tmp_dir
 }
 
 
 play() {
-  bones_count_before=$(ls -1 $bones_dir/bon* 2>/dev/null | wc -l)
+  bones_before=$(ls -1 $bones_dir/ 2>/dev/null | grep ^bon)
 
   $nethack
 
-  bones_count_after=$( ls -1 $bones_dir/bon* 2>/dev/null | wc -l)
-  bones_count_diff=$(( $bones_count_after - $bones_count_before ))
+  echo "nethack returned:  $?"
+
+  bones_after=$(ls -1 $bones_dir/ 2>/dev/null | grep ^bon)
 }
 
 
 show_bones() {
-  case $bones_count_diff in
-    0)
-      echo "No new bones files."
-      ;;
-    1)
-      echo "I think you left a bones file."
-      ;;
-    *)
-      echo "Wow.  I think you left ${bones_count_diff} bones files.  That's weird."
-      ;;
-  esac
+  echo -e "Bones available before playing:\n${bones_before}"
+  echo -e "Bones available after playing:\n${bones_after}"
 }
 
 
