@@ -1,16 +1,19 @@
 #!/bin/bash
 
-     nethack='/usr/local/games/nethack'
-   bones_dir='/usr/local/games/lib/nethackdir'
-     tmp_dir='/tmp/bones'
-    lock_dir="${tmp_dir}/.write_lock"
-     uidfile='/tmp/uidfile'
-     gidfile='/tmp/gidfile'
-  remote_uid='995'
-  remote_gid='992'
-lock_timeout='10'
-bones_before='unset'
- bones_after='unset'
+       nethack='/usr/local/games/nethack'
+       version=$(head -n 2 $nethack | tail -n 1 | awk '{print $3}')
+     bones_dir='/usr/local/games/lib/nethackdir'
+   mount_point="/tmp/bones"
+       tmp_dir="${mount_point}/${version}"
+remote_tmp_dir="cryptkeeper@neuronpointer.net:bones"
+      lock_dir="${tmp_dir}/.write_lock"
+       uidfile='/tmp/uidfile'
+       gidfile='/tmp/gidfile'
+    remote_uid='995'
+    remote_gid='992'
+  lock_timeout='10'
+  bones_before='unset'
+   bones_after='unset'
 
 
 function puke {
@@ -28,21 +31,22 @@ mount_tmp_dir() {
   echo $login_group | grep -qE '^[a-zA-Z0-9\._][a-zA-Z0-9\._\-]*$' || puke 1 "Invalid login group:  ${login_group}"
   echo "${USER}:${remote_uid}" > $uidfile
   echo "${login_group}:${remote_gid}" > $gidfile
-  fusermount -u $tmp_dir 2>&1 >/dev/null
+  fusermount -u $mount_point 2>&1 >/dev/null
   fusermount_ret=$?
-  if mountpoint $tmp_dir > /dev/null; then
-    puke $fusermount_ret "Failed to unmount:  ${tmp_dir}"
+  if mountpoint $mount_point > /dev/null; then
+    puke $fusermount_ret "Failed to unmount:  ${mount_point}"
   fi
-  mkdir -p $tmp_dir || puke $? "Failed to mkdir:  ${tmp_dir}"
+  mkdir -p $mount_point || puke $? "Failed to mkdir:  ${mount_point}"
   sshfs \
     -o idmap=file,uidfile=$uidfile,gidfile=$gidfile,reconnect \
-    cryptkeeper@neuronpointer.net:bones $tmp_dir || puke $? "Failed to mount:  ${tmp_dir}"
+    $remote_tmp_dir $mount_point || puke $? "Failed to mount:  ${mount_point}"
 }
 
 
 upload_all_bones_files() {
   lock_tmp_dir
   upload_count=0
+  mkdir -p "${tmp_dir}" || puke $? "Failed to create shared bones directory:  ${tmp_dir}"
   for bones_file in $(ls $bones_dir | grep '^bon') ; do
     bones_file=$(echo $bones_file | sed 's/.*\///g')
     mv $bones_dir/$bones_file $tmp_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
@@ -56,10 +60,10 @@ upload_all_bones_files() {
 
 lock_tmp_dir() {
   while true; do
-    while ! mkdir $lock_dir; do
+    while ! mkdir $lock_dir > /dev/null 2>&1; do
       echo "Waiting for write lock on shared bones location.  (Ctrl C to give up.)"
       sleep 1
-      if rmdir $lock_dir > /dev/null; then
+      if rmdir $lock_dir > /dev/null 2>&1; then
         continue
       fi
       for pid_file in $lock_dir/*; do
@@ -71,7 +75,7 @@ lock_tmp_dir() {
           strike_count_name="pid_${pid}_strike_count"
           strike_count="${!strike_count_name}"
           if test $lock_timeout -le ${strike_count}; then
-            echo -n "Waited $timeout seconds for PID ${pid} on host $(cat $pid_file) -- maybe you should go kill that.  [then press enter] "
+            echo -n "Waited $lock_timeout seconds for PID ${pid} owned by $(cat $pid_file) -- maybe you should go kill that.  [then press enter] "
             read response
           fi
           eval ${strike_count_name}=$(( strike_count + 1 ))
@@ -83,7 +87,7 @@ lock_tmp_dir() {
       done
     done
 
-    echo $HOSTNAME > $lock_dir/pid.$$
+    echo $USER@$HOSTNAME > $lock_dir/pid.$$
 
     if test -f $lock_dir/pid.$$; then
       break
@@ -103,14 +107,14 @@ unlock_tmp_dir() {
 
 download_bones_files() {
   lock_tmp_dir
-  available_count=$(ls $tmp_dir/ | grep ^bon | wc -l)
+  available_count=$(ls $tmp_dir | grep ^bon | wc -l)
   download_quota=$(( $available_count / 2 ))
   if test 1 -eq $available_count; then
     download_quota=1
   fi
 
   download_count=0
-  for bones_file in $(ls $tmp_dir/ | grep ^bon | sort -R); do
+  for bones_file in $(ls $tmp_dir | grep ^bon | sort -R); do
     if test $download_count -ge $download_quota; then break; fi
     mv $tmp_dir/$bones_file $bones_dir/$bones_file || puke $? "failed to move ${bones_file}"
     echo "Downloaded: ${bones_file}"
