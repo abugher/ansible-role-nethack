@@ -45,15 +45,12 @@ mount_tmp_dir() {
 
 upload_all_bones_files() {
   lock_tmp_dir
-  upload_count=0
   mkdir -p "${tmp_dir}" || puke $? "Failed to create shared bones directory:  ${tmp_dir}"
   for bones_file in $(ls $bones_dir | grep '^bon') ; do
     bones_file=$(echo $bones_file | sed 's/.*\///g')
     mv $bones_dir/$bones_file $tmp_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
     echo "Uploaded: ${bones_file}"
-    let upload_count++
   done
-  echo "Uploaded ${upload_count} bones files."
   unlock_tmp_dir
 }
 
@@ -93,15 +90,12 @@ lock_tmp_dir() {
       break
     fi
   done
-
-  echo "Shared bones location is locked."
 }
 
 
 unlock_tmp_dir() {
   rm $lock_dir/pid.$$ || puke $? "Failed to remove PID file."
   rmdir $lock_dir || puke $? "Failed to remove lock file."
-  echo "Shared bones location is unlocked."
 }
 
 
@@ -120,7 +114,6 @@ download_bones_files() {
     echo "Downloaded: ${bones_file}"
     let download_count++
   done
-  echo "Downloaded ${download_count} random bones files."
   unlock_tmp_dir
 }
 
@@ -128,6 +121,7 @@ download_bones_files() {
 play() {
   bones_before=$(ls -1 $bones_dir/ 2>/dev/null | grep ^bon)
 
+  echo "Starting nethack."
   $nethack
 
   echo "nethack returned:  $?"
@@ -136,16 +130,8 @@ play() {
 }
 
 
-show_bones() {
-  echo -e "Bones available before playing:\n${bones_before}"
-  echo -e "Bones available after playing:\n${bones_after}"
-}
-
-
-
 mount_tmp_dir
 upload_all_bones_files
 download_bones_files
 play
-show_bones
 upload_all_bones_files
