@@ -21,7 +21,7 @@ scripts:
 commands:
   - command:            'make install'
     chdir:              '/usr/local/src/nethack-3.6.1'
-    creates:            '/usr/local/games/lib/nethackdir/nethack'
+    creates:            '/usr/local/games/lib/nethackdir/nethack-but-just-overwrite-it'
     user:               'root'
 install_files:
   - owner:              'root'
