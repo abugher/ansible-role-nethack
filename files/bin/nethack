@@ -1,19 +1,18 @@
 #!/bin/bash
 
-       nethack='/usr/local/games/nethack'
-       version=$(head -n 2 $nethack | tail -n 1 | awk '{print $3}')
-     bones_dir='/usr/local/games/lib/nethackdir'
-   mount_point="/tmp/bones"
-       tmp_dir="${mount_point}/${version}"
-remote_tmp_dir="cryptkeeper@neuronpointer.net:bones"
-      lock_dir="${tmp_dir}/.write_lock"
-       uidfile='/tmp/uidfile'
-       gidfile='/tmp/gidfile'
-    remote_uid='995'
-    remote_gid='992'
-  lock_timeout='10'
-  bones_before='unset'
-   bones_after='unset'
+                 nethack='/usr/local/games/nethack'
+                 version=$(head -n 2 $nethack | tail -n 1 | awk '{print $3}')
+         local_bones_dir='/usr/local/games/lib/nethackdir'
+             mount_point="/tmp/bones"
+        remote_bones_dir="${mount_point}/${version}"
+ remote_remote_bones_dir="cryptkeeper@neuronpointer.net:bones"
+                lock_dir=".lock_dir"
+                 uidfile='/tmp/uidfile'
+                 gidfile='/tmp/gidfile'
+              remote_uid='995'
+              remote_gid='992'
+            bones_before='unset'
+             bones_after='unset'
 
 
 function puke {
@@ -24,7 +23,7 @@ function puke {
 }
 
 
-mount_tmp_dir() {
+mount_remote_bones_dir() {
   login_gid=$( awk -F : "/^$USER:/"' {print $3}' /etc/passwd )
   echo $login_gid | grep -qE '^[0-9]*$' || puke 1 "Invalid login UID:  ${login_uid}"
   login_group=$( awk -F : "/:$login_gid:/"' {print $1}' /etc/passwd )
@@ -39,99 +38,92 @@ mount_tmp_dir() {
   mkdir -p $mount_point || puke $? "Failed to mkdir:  ${mount_point}"
   sshfs \
     -o idmap=file,uidfile=$uidfile,gidfile=$gidfile,reconnect \
-    $remote_tmp_dir $mount_point || puke $? "Failed to mount:  ${mount_point}"
+    $remote_remote_bones_dir $mount_point || puke $? "Failed to mount:  ${mount_point}"
 }
 
 
-upload_all_bones_files() {
-  lock_tmp_dir
-  mkdir -p "${tmp_dir}" || puke $? "Failed to create shared bones directory:  ${tmp_dir}"
-  for bones_file in $(ls $bones_dir | grep '^bon') ; do
-    bones_file=$(echo $bones_file | sed 's/.*\///g')
-    mv $bones_dir/$bones_file $tmp_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
-    echo "Uploaded: ${bones_file}"
-  done
-  unlock_tmp_dir
-}
-
-
-lock_tmp_dir() {
-  while true; do
-    while ! mkdir $lock_dir > /dev/null 2>&1; do
-      echo "Waiting for write lock on shared bones location.  (Ctrl C to give up.)"
+lock_dir() {
+  dir="${1}"
+  while ! test -f $dir/$lock_dir/pid.$$; do
+    while ! mkdir $dir/$lock_dir > /dev/null 2>&1; do
+      echo "Waiting for lock on:  ${dir}  (Ctrl C to give up.)"
+      for pid_file in $dir/$lock_dir/pid.*; do
+        pid=$(sed 's/.*\.//g' <<< $pid_file)
+        read user < $pid_file
+        echo "Lock held by ${user} for PID:  ${pid}"
+      done
       sleep 1
-      if rmdir $lock_dir > /dev/null 2>&1; then
+      if rmdir $dir/$lock_dir > /dev/null 2>&1; then
         continue
       fi
-      for pid_file in $lock_dir/*; do
-        pid=$(
-          echo $pid_file | sed 's/.*\.//g'
-        )
-        echo "Checking for process:  ${pid}"
-        if ps -p $pid; then
-          strike_count_name="pid_${pid}_strike_count"
-          strike_count="${!strike_count_name}"
-          if test $lock_timeout -le ${strike_count}; then
-            echo -n "Waited $lock_timeout seconds for PID ${pid} owned by $(cat $pid_file) -- maybe you should go kill that.  [then press enter] "
-            read response
-          fi
-          eval ${strike_count_name}=$(( strike_count + 1 ))
-        else
-          echo "Process ${pid} not found.  Removing stale lock file."
-          rm $pid_file || puke $? "Failed to remove stale PID file for process:  $pid"
-          continue
-        fi
-      done
     done
 
-    echo $USER@$HOSTNAME > $lock_dir/pid.$$
-
-    if test -f $lock_dir/pid.$$; then
-      break
-    fi
+    echo $USER@$HOSTNAME > $dir/$lock_dir/pid.$$
   done
+
+  echo "Locked:  ${dir}"
 }
 
 
-unlock_tmp_dir() {
-  rm $lock_dir/pid.$$ || puke $? "Failed to remove PID file."
-  rmdir $lock_dir || puke $? "Failed to remove lock file."
+unlock_dir() {
+  dir="${1}"
+  rm $dir/$lock_dir/pid.$$ || puke $? "Failed to remove PID file."
+  rmdir $dir/$lock_dir || puke $? "Failed to remove lock file."
+  echo "Unlocked:  ${dir}"
+}
+
+
+upload_bones_files() {
+  lock_dir $remote_bones_dir
+  lock_dir $local_bones_dir
+  mkdir -p "${remote_bones_dir}" || puke $? "Failed to create shared bones directory:  ${remote_bones_dir}"
+  for bones_file in $(ls $local_bones_dir | grep '^bon') ; do
+    bones_file=$(echo $bones_file | sed 's/.*\///g')
+    mv $local_bones_dir/$bones_file $remote_bones_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
+    echo "Uploaded: ${bones_file}"
+  done
+  unlock_dir $local_bones_dir
+  unlock_dir $remote_bones_dir
 }
 
 
 download_bones_files() {
-  lock_tmp_dir
-  available_count=$(ls $tmp_dir | grep ^bon | wc -l)
+  lock_dir $remote_bones_dir
+  lock_dir $local_bones_dir
+  available_count=$(ls $remote_bones_dir | grep ^bon | wc -l)
   download_quota=$(( $available_count / 2 ))
   if test 1 -eq $available_count; then
     download_quota=1
   fi
 
   download_count=0
-  for bones_file in $(ls $tmp_dir | grep ^bon | sort -R); do
+  for bones_file in $(ls $remote_bones_dir | grep ^bon | sort -R); do
     if test $download_count -ge $download_quota; then break; fi
-    mv $tmp_dir/$bones_file $bones_dir/$bones_file || puke $? "failed to move ${bones_file}"
+    mv $remote_bones_dir/$bones_file $local_bones_dir/$bones_file || puke $? "failed to move ${bones_file}"
     echo "Downloaded: ${bones_file}"
     let download_count++
   done
-  unlock_tmp_dir
+  unlock_dir $local_bones_dir
+  unlock_dir $remote_bones_dir
 }
 
 
 play() {
-  bones_before=$(ls -1 $bones_dir/ 2>/dev/null | grep ^bon)
+  lock_dir $local_bones_dir
+  bones_before=$(ls -1 $local_bones_dir/ 2>/dev/null | grep ^bon)
 
   echo "Starting nethack."
   $nethack
 
   echo "nethack returned:  $?"
 
-  bones_after=$(ls -1 $bones_dir/ 2>/dev/null | grep ^bon)
+  bones_after=$(ls -1 $local_bones_dir/ 2>/dev/null | grep ^bon)
+  unlock_dir $local_bones_dir
 }
 
 
-mount_tmp_dir
-upload_all_bones_files
+mount_remote_bones_dir
+upload_bones_files
 download_bones_files
 play
-upload_all_bones_files
+upload_bones_files

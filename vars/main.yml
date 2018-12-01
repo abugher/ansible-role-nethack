@@ -15,7 +15,7 @@ install_packages:
   - 'gcc'
   - 'flex'
   - 'bison'
-  - 'build-essentials'
+  - 'build-essential'
 unpack_tarballs:
   - src:                "{{ role_path }}/files/source/nethack-361-src.tgz"
     dest:               '/usr/local/src'
