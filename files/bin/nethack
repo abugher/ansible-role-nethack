@@ -11,8 +11,8 @@
                  gidfile='/tmp/gidfile'
               remote_uid='995'
               remote_gid='992'
-            bones_before='unset'
-             bones_after='unset'
+             bones_files=()
+            lock_timeout=10
 
 
 function puke {
@@ -42,26 +42,35 @@ mount_remote_bones_dir() {
 }
 
 
-lock_dir() {
-  dir="${1}"
-  while ! test -f $dir/$lock_dir/pid.$$; do
-    while ! mkdir $dir/$lock_dir > /dev/null 2>&1; do
-      echo "Waiting for lock on:  ${dir}  (Ctrl C to give up.)"
-      for pid_file in $dir/$lock_dir/pid.*; do
+lock() {
+  file_lock_dir="${1}"
+  i=0
+  while ! test -f $file_lock_dir/pid.$$; do
+    while ! mkdir $file_lock_dir > /dev/null 2>&1; do
+      if rmdir $file_lock_dir > /dev/null 2>&1; then
+        continue
+      fi
+      if test $i -ge $lock_timeout; then
+        puke $? "Failed to acquire lock."
+      fi
+      for pid_file in $file_lock_dir/pid.*; do
         pid=$(sed 's/.*\.//g' <<< $pid_file)
         read user < $pid_file
         echo "Lock held by ${user} for PID:  ${pid}"
       done
       sleep 1
-      if rmdir $dir/$lock_dir > /dev/null 2>&1; then
-        continue
-      fi
+      i=$((i+1))
     done
 
-    echo $USER@$HOSTNAME > $dir/$lock_dir/pid.$$
+    echo $USER@$HOSTNAME > $file_lock_dir/pid.$$
   done
+}
 
-  echo "Locked:  ${dir}"
+
+lock_dir() {
+  dir="${1}"
+  lock "${dir}/${lock_dir}"
+  #echo "Locked:  ${dir}"
 }
 
 
@@ -69,27 +78,61 @@ unlock_dir() {
   dir="${1}"
   rm $dir/$lock_dir/pid.$$ || puke $? "Failed to remove PID file."
   rmdir $dir/$lock_dir || puke $? "Failed to remove lock file."
-  echo "Unlocked:  ${dir}"
+  #echo "Unlocked:  ${dir}"
+}
+
+
+lock_file() {
+  file="${1}"
+  file_lock_dir=$(sed -E 's/\/([^\/]*)$/\/.lock.\1/' <<< $file)
+  lock $file_lock_dir
+  #echo "Locked:  $file"
+}
+
+
+unlock_file() {
+  file="${1}"
+  file_lock_dir=$(sed -E 's/\/([^\/]*)$/\/.lock.\1/' <<< $file)
+  rm $file_lock_dir/pid.$$ || puke $? "Failed to remove PID file."
+  rmdir $file_lock_dir || puke $? "Failed to remove lock file."
+  #echo "Unlocked:  ${file}"
+}
+
+
+file_is_locked() {
+  file="${1}"
+  file_lock_dir=$(sed -E 's/\/([^\/]*)$/\/.lock.\1/' <<< $file)
+  test -d $file_lock_dir
+}
+
+
+release_bones_files() {
+  for bones_file in "${bones_files[@]}"; do
+    unlock_file $local_bones_dir/$bones_file
+  done
+
+  unset bones_files
 }
 
 
 upload_bones_files() {
   lock_dir $remote_bones_dir
-  lock_dir $local_bones_dir
   mkdir -p "${remote_bones_dir}" || puke $? "Failed to create shared bones directory:  ${remote_bones_dir}"
   for bones_file in $(ls $local_bones_dir | grep '^bon') ; do
     bones_file=$(echo $bones_file | sed 's/.*\///g')
-    mv $local_bones_dir/$bones_file $remote_bones_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
-    echo "Uploaded: ${bones_file}"
+    if ! file_is_locked $local_bones_dir/$bones_file; then
+      mv $local_bones_dir/$bones_file $remote_bones_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
+      echo "Uploaded: ${bones_file}"
+    else
+      echo "Skipped (locked):  ${bones_file}"
+    fi
   done
-  unlock_dir $local_bones_dir
   unlock_dir $remote_bones_dir
 }
 
 
 download_bones_files() {
   lock_dir $remote_bones_dir
-  lock_dir $local_bones_dir
   available_count=$(ls $remote_bones_dir | grep ^bon | wc -l)
   download_quota=$(( $available_count / 2 ))
   if test 1 -eq $available_count; then
@@ -99,26 +142,21 @@ download_bones_files() {
   download_count=0
   for bones_file in $(ls $remote_bones_dir | grep ^bon | sort -R); do
     if test $download_count -ge $download_quota; then break; fi
+    bones_files+=( $bones_file )
+    lock_file $local_bones_dir/$bones_file
     mv $remote_bones_dir/$bones_file $local_bones_dir/$bones_file || puke $? "failed to move ${bones_file}"
     echo "Downloaded: ${bones_file}"
     let download_count++
   done
-  unlock_dir $local_bones_dir
   unlock_dir $remote_bones_dir
 }
 
 
 play() {
-  lock_dir $local_bones_dir
-  bones_before=$(ls -1 $local_bones_dir/ 2>/dev/null | grep ^bon)
-
   echo "Starting nethack."
   $nethack
 
   echo "nethack returned:  $?"
-
-  bones_after=$(ls -1 $local_bones_dir/ 2>/dev/null | grep ^bon)
-  unlock_dir $local_bones_dir
 }
 
 
@@ -126,4 +164,5 @@ mount_remote_bones_dir
 upload_bones_files
 download_bones_files
 play
+release_bones_files
 upload_bones_files
