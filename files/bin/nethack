@@ -7,8 +7,8 @@
         remote_bones_dir="${mount_point}/${version}"
  remote_remote_bones_dir="cryptkeeper@neuronpointer.net:bones"
                 lock_dir=".lock_dir"
-                 uidfile='/tmp/uidfile'
-                 gidfile='/tmp/gidfile'
+                 uidfile="/tmp/nethack_bones_uidfile.${USER}"
+                 gidfile="/tmp/nethack_bones_gidfile.${USER}"
               remote_uid='995'
               remote_gid='992'
              bones_files=()
@@ -23,15 +23,18 @@ function puke {
 }
 
 
-mount_remote_bones_dir() {
+mount_and_lock_remote_bones_dir() {
   login_gid=$( awk -F : "/^$USER:/"' {print $3}' /etc/passwd )
   echo $login_gid | grep -qE '^[0-9]*$' || puke 1 "Invalid login UID:  ${login_uid}"
   login_group=$( awk -F : "/:$login_gid:/"' {print $1}' /etc/passwd )
   echo $login_group | grep -qE '^[a-zA-Z0-9\._][a-zA-Z0-9\._\-]*$' || puke 1 "Invalid login group:  ${login_group}"
   echo "${USER}:${remote_uid}" > $uidfile
   echo "${login_group}:${remote_gid}" > $gidfile
-  fusermount -u $mount_point 2>&1 >/dev/null
-  fusermount_ret=$?
+  if mountpoint $mount_point; then
+    lock_dir $mount_point
+    fusermount -u $mount_point 2>&1 >/dev/null
+    fusermount_ret=$?
+  fi
   if mountpoint $mount_point > /dev/null; then
     puke $fusermount_ret "Failed to unmount:  ${mount_point}"
   fi
@@ -39,6 +42,7 @@ mount_remote_bones_dir() {
   sshfs \
     -o idmap=file,uidfile=$uidfile,gidfile=$gidfile,reconnect \
     $remote_remote_bones_dir $mount_point || puke $? "Failed to mount:  ${mount_point}"
+  lock_dir $mount_point
 }
 
 
@@ -160,9 +164,12 @@ play() {
 }
 
 
-mount_remote_bones_dir
+mount_and_lock_remote_bones_dir
 upload_bones_files
 download_bones_files
+unlock_remote_bones_dir
 play
 release_bones_files
+mount_and_lock_remote_bones_dir
 upload_bones_files
+unlock_remote_bones_dir
