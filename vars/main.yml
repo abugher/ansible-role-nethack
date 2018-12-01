@@ -1,10 +1,4 @@
 ---
-install_packages:
-  - 'make'
-  - 'gcc'
-  - 'flex'
-  - 'bison'
-  - 'build-essentials'
 create_files:
   # Copying this from existing (working) files.  Reconsider later.
   - owner:              'root'
@@ -17,6 +11,11 @@ install_packages:
   - 'libncurses5-dev'
   - 'byacc'
   - 'flex'
+  - 'make'
+  - 'gcc'
+  - 'flex'
+  - 'bison'
+  - 'build-essentials'
 unpack_tarballs:
   - src:                "{{ role_path }}/files/source/nethack-361-src.tgz"
     dest:               '/usr/local/src'
