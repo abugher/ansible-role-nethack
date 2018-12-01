@@ -1,4 +1,10 @@
 ---
+install_packages:
+  - 'make'
+  - 'gcc'
+  - 'flex'
+  - 'bison'
+  - 'build-essentials'
 create_files:
   # Copying this from existing (working) files.  Reconsider later.
   - owner:              'root'
