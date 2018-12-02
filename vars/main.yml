@@ -34,3 +34,7 @@ install_files:
     mode:               '0755'
     src:                "{{ role_path }}/files/bin/nethack"
     dest:               '/usr/local/bin/nethack'
+lines_in_files:
+  - dest:               '/etc/fuse.conf'
+    line:               'user_allow_other'
+    regexp:             'user_allow_other'

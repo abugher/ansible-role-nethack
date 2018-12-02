@@ -3,9 +3,9 @@
                  nethack='/usr/local/games/nethack'
                  version=$(head -n 2 $nethack | tail -n 1 | awk '{print $3}')
          local_bones_dir='/usr/local/games/lib/nethackdir'
-             mount_point="/tmp/bones"
-        remote_bones_dir="${mount_point}/${version}"
- remote_remote_bones_dir="cryptkeeper@neuronpointer.net:bones"
+             remote_bones_dir="/tmp/bones"
+        version_dir="${remote_bones_dir}/${version}"
+ remote_bones_url="cryptkeeper@neuronpointer.net:bones"
                 lock_dir=".lock_dir"
                  uidfile="/tmp/nethack_bones_uidfile.${USER}"
                  gidfile="/tmp/nethack_bones_gidfile.${USER}"
@@ -23,26 +23,29 @@ function puke {
 }
 
 
-mount_and_lock_remote_bones_dir() {
+mount_and_lock_remote_bones_dir () {
   login_gid=$( awk -F : "/^$USER:/"' {print $3}' /etc/passwd )
   echo $login_gid | grep -qE '^[0-9]*$' || puke 1 "Invalid login UID:  ${login_uid}"
   login_group=$( awk -F : "/:$login_gid:/"' {print $1}' /etc/passwd )
   echo $login_group | grep -qE '^[a-zA-Z0-9\._][a-zA-Z0-9\._\-]*$' || puke 1 "Invalid login group:  ${login_group}"
   echo "${USER}:${remote_uid}" > $uidfile
   echo "${login_group}:${remote_gid}" > $gidfile
-  if mountpoint $mount_point; then
-    lock_dir $mount_point
-    fusermount -u $mount_point 2>&1 >/dev/null
-    fusermount_ret=$?
+  #if mountpoint $remote_bones_dir; then
+  #  lock_dir $remote_bones_dir
+  #  fusermount -u $remote_bones_dir 2>&1 >/dev/null
+  #  fusermount_ret=$?
+  #fi
+  #if mountpoint $remote_bones_dir > /dev/null; then
+  #  puke $fusermount_ret "Failed to unmount:  ${remote_bones_dir}"
+  #fi
+  mkdir -p $remote_bones_dir || puke $? "Failed to mkdir:  ${remote_bones_dir}"
+  if ! mountpoint $remote_bones_dir > /dev/null; then
+    chown :games /tmp/bones || puke $? "Failed to create mount point for remote shared bones."
+    sshfs \
+      -o idmap=file,uidfile=$uidfile,gidfile=$gidfile,allow_other,reconnect \
+      $remote_bones_url $remote_bones_dir || puke $? "Failed to mount:  ${remote_bones_dir}"
   fi
-  if mountpoint $mount_point > /dev/null; then
-    puke $fusermount_ret "Failed to unmount:  ${mount_point}"
-  fi
-  mkdir -p $mount_point || puke $? "Failed to mkdir:  ${mount_point}"
-  sshfs \
-    -o idmap=file,uidfile=$uidfile,gidfile=$gidfile,reconnect \
-    $remote_remote_bones_dir $mount_point || puke $? "Failed to mount:  ${mount_point}"
-  lock_dir $mount_point
+  lock_dir $remote_bones_dir
 }
 
 
@@ -120,39 +123,39 @@ release_bones_files() {
 
 
 upload_bones_files() {
-  lock_dir $remote_bones_dir
-  mkdir -p "${remote_bones_dir}" || puke $? "Failed to create shared bones directory:  ${remote_bones_dir}"
+  lock_dir $version_dir
+  mkdir -p "${version_dir}" || puke $? "Failed to create shared bones directory:  ${version_dir}"
   for bones_file in $(ls $local_bones_dir | grep '^bon') ; do
     bones_file=$(echo $bones_file | sed 's/.*\///g')
     if ! file_is_locked $local_bones_dir/$bones_file; then
-      mv $local_bones_dir/$bones_file $remote_bones_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
+      mv $local_bones_dir/$bones_file $version_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
       echo "Uploaded: ${bones_file}"
     else
       echo "Skipped (locked):  ${bones_file}"
     fi
   done
-  unlock_dir $remote_bones_dir
+  unlock_dir $version_dir
 }
 
 
 download_bones_files() {
-  lock_dir $remote_bones_dir
-  available_count=$(ls $remote_bones_dir | grep ^bon | wc -l)
+  lock_dir $version_dir
+  available_count=$(ls $version_dir | grep ^bon | wc -l)
   download_quota=$(( $available_count / 2 ))
   if test 1 -eq $available_count; then
     download_quota=1
   fi
 
   download_count=0
-  for bones_file in $(ls $remote_bones_dir | grep ^bon | sort -R); do
+  for bones_file in $(ls $version_dir | grep ^bon | sort -R); do
     if test $download_count -ge $download_quota; then break; fi
     bones_files+=( $bones_file )
     lock_file $local_bones_dir/$bones_file
-    mv $remote_bones_dir/$bones_file $local_bones_dir/$bones_file || puke $? "failed to move ${bones_file}"
+    mv $version_dir/$bones_file $local_bones_dir/$bones_file || puke $? "failed to move ${bones_file}"
     echo "Downloaded: ${bones_file}"
     let download_count++
   done
-  unlock_dir $remote_bones_dir
+  unlock_dir $version_dir
 }
 
 
@@ -167,9 +170,9 @@ play() {
 mount_and_lock_remote_bones_dir
 upload_bones_files
 download_bones_files
-unlock_remote_bones_dir
+unlock_dir $remote_bones_dir
 play
 release_bones_files
 mount_and_lock_remote_bones_dir
 upload_bones_files
-unlock_remote_bones_dir
+unlock_dir $remote_bones_dir
