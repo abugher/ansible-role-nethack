@@ -23,7 +23,7 @@ function puke {
 }
 
 
-mount_and_lock_remote_bones_dir () {
+mount_remote_bones_dir () {
   login_gid=$( awk -F : "/^$USER:/"' {print $3}' /etc/passwd )
   echo $login_gid | grep -qE '^[0-9]*$' || puke 1 "Invalid login UID:  ${login_uid}"
   login_group=$( awk -F : "/:$login_gid:/"' {print $1}' /etc/passwd )
@@ -45,7 +45,6 @@ mount_and_lock_remote_bones_dir () {
       -o idmap=file,uidfile=$uidfile,gidfile=$gidfile,allow_other,reconnect \
       $remote_bones_url $remote_bones_dir || puke $? "Failed to mount:  ${remote_bones_dir}"
   fi
-  lock_dir $remote_bones_dir
 }
 
 
@@ -58,10 +57,13 @@ lock() {
         continue
       fi
       if test $i -ge $lock_timeout; then
-        puke $? "Failed to acquire lock."
+        puke $? "Failed to acquire lock:  $file_lock_dir"
       fi
       for pid_file in $file_lock_dir/pid.*; do
         pid=$(sed 's/.*\.//g' <<< $pid_file)
+        if test '*' == "${pid}"; then
+          continue
+        fi
         read user < $pid_file
         echo "Lock held by ${user} for PID:  ${pid}"
       done
@@ -167,12 +169,14 @@ play() {
 }
 
 
-mount_and_lock_remote_bones_dir
+mount_remote_bones_dir
+lock_dir $remote_bones_dir
 upload_bones_files
 download_bones_files
 unlock_dir $remote_bones_dir
 play
 release_bones_files
-mount_and_lock_remote_bones_dir
+mount_remote_bones_dir
+lock_dir $remote_bones_dir
 upload_bones_files
 unlock_dir $remote_bones_dir
