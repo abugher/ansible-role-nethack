@@ -1,0 +1,27 @@
+# See also .Xresources for many nethack-specific changes, such as color tweaks.
+
+# Default sysconf, stripped of comments -- update this for each new nethack version:
+WIZARDS=root games
+EXPLORERS=*
+GENERICUSERS=play player game games nethack nethacker
+MAXPLAYERS=10
+GDBPATH=/usr/bin/gdb
+GREPPATH=/bin/grep
+PANICTRACE_GDB=1
+PANICTRACE_LIBC=2
+
+
+# Personal configuration -- hopefully version-agnostic:
+
+#OPTIONS=name:DrDrstrcto,role:wizard,race:elf,gender:male,align:chaotic
+#OPTIONS=catname:Regex,fruit:fruit
+
+OPTIONS=boulder:0,hilite_pet,showexp,showscore,showrace,time,color,menucolors,msg_window:full
+OPTIONS=suppress_alert:3.4.3
+OPTIONS=!autopickup,autodig
+OPTIONS=!mail
+
+MENUCOLOR="blessed"=green                                                
+MENUCOLOR="holy"=green                                                   
+MENUCOLOR=" cursed"=red                                                   
+MENUCOLOR="unholy"=red                                                   
