@@ -8,6 +8,7 @@ create_files:
     path:               '/usr/local/src'
 # I might want to set ownership of the source files to ansible and drop sudo for the build phase -- after the refactor and a good test.
 install_packages:
+  - 'sshfs'
   - 'libncurses5-dev'
   - 'byacc'
   - 'flex'
