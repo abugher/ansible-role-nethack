@@ -24,20 +24,8 @@ function puke {
 
 
 mount_remote_bones_dir () {
-  login_gid=$( awk -F : "/^$USER:/"' {print $3}' /etc/passwd )
-  echo $login_gid | grep -qE '^[0-9]*$' || puke 1 "Invalid login GID:  ${login_gid}"
-  login_group=$( awk -F : "/:$login_gid:/"' {print $1}' /etc/passwd )
-  echo $login_group | grep -qE '^[a-zA-Z0-9\._][a-zA-Z0-9\._\-]*$' || puke 1 "Invalid login group:  ${login_group}"
   echo "${USER}:${remote_uid}" > $uidfile
-  echo "${login_group}:${remote_gid}" > $gidfile
-  #if mountpoint $remote_bones_dir; then
-  #  lock_dir $remote_bones_dir
-  #  fusermount -u $remote_bones_dir 2>&1 >/dev/null
-  #  fusermount_ret=$?
-  #fi
-  #if mountpoint $remote_bones_dir > /dev/null; then
-  #  puke $fusermount_ret "Failed to unmount:  ${remote_bones_dir}"
-  #fi
+  echo "games:${remote_gid}" > $gidfile
   mkdir -p $remote_bones_dir || puke $? "Failed to mkdir:  ${remote_bones_dir}"
   if ! mountpoint $remote_bones_dir > /dev/null; then
     chown :games /tmp/bones || puke $? "Failed to create mount point for remote shared bones."
