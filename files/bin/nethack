@@ -25,7 +25,7 @@ function puke {
 
 mount_remote_bones_dir () {
   login_gid=$( awk -F : "/^$USER:/"' {print $3}' /etc/passwd )
-  echo $login_gid | grep -qE '^[0-9]*$' || puke 1 "Invalid login UID:  ${login_uid}"
+  echo $login_gid | grep -qE '^[0-9]*$' || puke 1 "Invalid login GID:  ${login_gid}"
   login_group=$( awk -F : "/:$login_gid:/"' {print $1}' /etc/passwd )
   echo $login_group | grep -qE '^[a-zA-Z0-9\._][a-zA-Z0-9\._\-]*$' || puke 1 "Invalid login group:  ${login_group}"
   echo "${USER}:${remote_uid}" > $uidfile

@@ -113,3 +113,5 @@ lines_in_files:
   - dest:               '/etc/X11/Xresources/x11-common'
     line:               'NetHack*VT100.color15:                  #FFFFFF /* CLR_WHITE */'
     regexp:             'NetHack*VT100.color15'
+known_hosts:
+  - 'neuron'            # Make this a reference to a role, or hostgroup, or something.

@@ -7,3 +7,4 @@
   when:                 scripts_result.changed
 - include:              '../tasks/install_files.yml'
 - include:              '../tasks/lines_in_files.yml'
+- include:              '../tasks/known_hosts.yml'
