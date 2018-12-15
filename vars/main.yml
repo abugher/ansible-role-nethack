@@ -39,6 +39,11 @@ install_files:
   - owner:              'root'
     group:              'root'
     mode:               '0755'
+    src:                "{{ role_path }}/files/bin/notehack"
+    dest:               '/usr/local/bin/notehack'
+  - owner:              'root'
+    group:              'root'
+    mode:               '0755'
     src:                "{{ role_path }}/files/conf/sysconf"
     dest:               '/usr/local/games/lib/nethackdir/sysconf'
 lines_in_files:
