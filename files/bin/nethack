@@ -187,7 +187,7 @@ download_bones_files() {
     # Eliminate precision past the second to avoid disagreements about how many
     # decimal places of precision are kept, and subsequent comparison errors.
     # How many bones files can you generate per second, anyway?
-    bones_entry="$(stat -c %y ${bones_file} | sed 's/\.[0-9]*//') - ${bones_file}"
+    bones_entry="$(stat -c %y "${version_dir}/${bones_file}" | sed 's/\.[0-9]*//') - ${bones_file}"
     lock_file $local_bones_dir/$bones_file
     mv $version_dir/$bones_file $local_bones_dir/$bones_file || puke $? "failed to move ${bones_file}"
     echo "      Downloaded: $(stat -c %y ${bones_file}) - ${bones_file}"
