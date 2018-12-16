@@ -115,11 +115,14 @@ release_bones_files() {
 upload_bones_files() {
   lock_dir $version_dir
   mkdir -p "${version_dir}" || puke $? "Failed to create shared bones directory:  ${version_dir}"
+  oldpwd=$PWD
+  cd $version_dir/
   for bones_file in $(ls $local_bones_dir | grep '^bon') ; do
     bones_file=$(echo $bones_file | sed 's/.*\///g')
     if ! file_is_locked $local_bones_dir/$bones_file; then
       mv $local_bones_dir/$bones_file $version_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
-      echo "Uploaded: ${bones_file}"
+      echo -n "Uploaded: " 
+      stat -c %y ${bones_file}
     else
       echo "Skipped (locked):  ${bones_file}"
     fi
@@ -136,15 +139,19 @@ download_bones_files() {
     download_quota=1
   fi
 
+  oldpwd=$PWD
+  cd $local_bones_dir/
   download_count=0
   for bones_file in $(ls $version_dir | grep ^bon | sort -R); do
     if test $download_count -ge $download_quota; then break; fi
     bones_files+=( $bones_file )
     lock_file $local_bones_dir/$bones_file
     mv $version_dir/$bones_file $local_bones_dir/$bones_file || puke $? "failed to move ${bones_file}"
-    echo "Downloaded: ${bones_file}"
+    echo -n "Downloaded: "
+    stat -c %y ${bones_file}
     let download_count++
   done
+  cd -
   unlock_dir $version_dir
 }
 
