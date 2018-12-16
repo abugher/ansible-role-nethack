@@ -1,5 +1,4 @@
 #!/bin/bash
-
                  nethack='/usr/local/games/nethack'
                  version=$(head -n 2 $nethack | tail -n 1 | awk '{print $3}')
          local_bones_dir='/usr/local/games/lib/nethackdir'
@@ -114,6 +113,7 @@ release_bones_files() {
 
 upload_bones_files() {
   upload_pass=$(( upload_pass + 1 ))
+  touch $bones_registry || puke $? "Failed to touch bones registry:  ${bones_registry}"
   lock_dir $version_dir
   mkdir -p "${version_dir}" || puke $? "Failed to create shared bones directory:  ${version_dir}"
   oldpwd=$PWD
@@ -165,7 +165,15 @@ download_bones_files() {
   cd $local_bones_dir/
   download_count=0
   for bones_file in $(ls $version_dir | grep ^bon | sort -R); do
-    if test $download_count -ge $download_quota; then break; fi
+    if test $download_count -ge $download_quota; then 
+      break
+    fi
+    if 
+      ! test -z "${NETHACK_SKIP_SELF_BONES:+isset}" \
+      && grep -q "^${bones_file}\$" $bones_registry
+    then 
+      continue
+    fi
     bones_files+=( $bones_file )
     lock_file $local_bones_dir/$bones_file
     mv $version_dir/$bones_file $local_bones_dir/$bones_file || puke $? "failed to move ${bones_file}"
