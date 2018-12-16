@@ -124,7 +124,9 @@ upload_bones_files() {
         mv $local_bones_dir/$bones_file $version_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
       else
         lock_file $bones_registry
-        grep -v "^${bones_file}\$" $bones_registry "${bones_registry}.tmp" || puke $? "Failed to create temporary file:  ${bones_registry}.tmp"
+        bones_entry=$(grep " - ${bones_file}\$" $bones_registry)
+        echo "       Consumed:  ${bones_entry}"
+        grep -v " - ${bones_file}\$" $bones_registry "${bones_registry}.tmp" || puke $? "Failed to create temporary file:  ${bones_registry}.tmp"
         mv $bones_registry.tmp $bones_registry || puke $? "Failed to overwrite bones registry."
         unlock_file $bones_registry
       fi
@@ -135,15 +137,22 @@ upload_bones_files() {
   done
   for bones_file in $(ls $local_bones_dir | grep '^bon'); do
     bones_file=$(echo $bones_file | sed 's/.*\///g')
+    bones_entry="$(stat -c %y ${bones_file}) - ${bones_file}"
     if ! file_is_locked $local_bones_dir/$bones_file; then
       mv $local_bones_dir/$bones_file $version_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
       if test $upload_pass -gt 1; then
-        echo "             New: $(stat -c %y ${bones_file}) - ${bones_file}" 
+        echo "             New: ${bones_entry}"
         lock_file $bones_registry
-        echo "${bones_file}" >> $bones_registry
+        if grep -q " - ${bones_file}\$" $bones_registry; then
+          overwritten_bones_entry=$(grep " - ${bones_file}\$" $bones_registry)
+          echo "    Overwriting:  ${overwritten_bones_entry}"
+          grep -v " - ${bones_file}\$" $bones_registry "${bones_registry}.tmp" || puke $? "Failed to create temporary file:  ${bones_registry}.tmp"
+          mv $bones_registry.tmp $bones_registry || puke $? "Failed to overwrite bones registry."
+        fi
+        echo "${bones_entry}" >> $bones_registry
         unlock_file $bones_registry
       else
-        echo "        Salvaged: $(stat -c %y ${bones_file}) - ${bones_file}" 
+        echo "        Salvaged: ${bones_entry}"
       fi
     else
       echo "Skipped (locked):  ${bones_file}"
@@ -170,11 +179,15 @@ download_bones_files() {
     fi
     if 
       ! test -z "${NETHACK_SKIP_SELF_BONES:+isset}" \
-      && grep -q "^${bones_file}\$" $bones_registry
+      && grep -q " - ${bones_file}\$" $bones_registry
     then 
       continue
     fi
     bones_files+=( $bones_file )
+    # Eliminate precision past the second to avoid disagreements about how many
+    # decimal places of precision are kept, and subsequent comparison errors.
+    # How many bones files can you generate per second, anyway?
+    bones_entry="$(stat -c %y ${bones_file} | sed 's/\.[0-9]*//') - ${bones_file}"
     lock_file $local_bones_dir/$bones_file
     mv $version_dir/$bones_file $local_bones_dir/$bones_file || puke $? "failed to move ${bones_file}"
     echo "      Downloaded: $(stat -c %y ${bones_file}) - ${bones_file}"
