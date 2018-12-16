@@ -128,7 +128,7 @@ upload_bones_files() {
         mv $bones_registry.tmp $bones_registry || puke $? "Failed to overwrite bones registry."
         unlock_file $bones_registry
       fi
-      echo "  Uploaded: $(stat -c %y ${bones_file}) - ${bones_file}" 
+      echo "        Uploaded: $(stat -c %y ${bones_file}) - ${bones_file}" 
     else
       echo "Skipped (locked):  ${bones_file}"
     fi
@@ -138,12 +138,12 @@ upload_bones_files() {
     if ! file_is_locked $local_bones_dir/$bones_file; then
       mv $local_bones_dir/$bones_file $version_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
       if test $upload_pass -gt 1; then
-        echo "       New: $(stat -c %y ${bones_file}) - ${bones_file}" 
+        echo "             New: $(stat -c %y ${bones_file}) - ${bones_file}" 
         lock_file $bones_registry
         echo "${bones_file}" >> $bones_registry
         unlock_file $bones_registry
       else
-        echo "  Salvaged: $(stat -c %y ${bones_file}) - ${bones_file}" 
+        echo "        Salvaged: $(stat -c %y ${bones_file}) - ${bones_file}" 
       fi
     else
       echo "Skipped (locked):  ${bones_file}"
@@ -177,7 +177,7 @@ download_bones_files() {
     bones_files+=( $bones_file )
     lock_file $local_bones_dir/$bones_file
     mv $version_dir/$bones_file $local_bones_dir/$bones_file || puke $? "failed to move ${bones_file}"
-    echo "Downloaded: $(stat -c %y ${bones_file}) - ${bones_file}"
+    echo "      Downloaded: $(stat -c %y ${bones_file}) - ${bones_file}"
     let download_count++
   done
   cd -
