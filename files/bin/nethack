@@ -2,7 +2,7 @@
                  nethack='/usr/local/games/nethack'
                  version=$(head -n 2 $nethack | tail -n 1 | awk '{print $3}')
          local_bones_dir='/usr/local/games/lib/nethackdir'
-          bones_registry="${local_bones_dir}/.bones_registry.${USER}.txt"
+          bones_registry="${local_bones_dir}/.bones_registry.${USER}"
         remote_bones_dir="/tmp/bones"
              version_dir="${remote_bones_dir}/${version}"
         remote_bones_url="cryptkeeper@neuronpointer.net:bones"
@@ -54,7 +54,7 @@ lock() {
           continue
         fi
         read user < $pid_file
-        echo "Lock held by ${user} for PID:  ${pid}"
+        echo "Lock held by ${user} for PID ${pid} at:  ${file_lock_dir}"
       done
       sleep 1
       i=$((i+1))
@@ -137,7 +137,7 @@ upload_bones_files() {
   done
   for bones_file in $(ls $local_bones_dir | grep '^bon'); do
     bones_file=$(echo $bones_file | sed 's/.*\///g')
-    bones_entry="$(stat -c %y ${bones_file}) - ${bones_file}"
+    bones_entry="$(stat -c %y "${local_bones_dir}/${bones_file}") - ${bones_file}"
     if ! file_is_locked $local_bones_dir/$bones_file; then
       mv $local_bones_dir/$bones_file $version_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
       if test $upload_pass -gt 1; then
@@ -169,6 +169,8 @@ download_bones_files() {
   if test 1 -eq $available_count; then
     download_quota=1
   fi
+
+  touch $bones_registry || puke $? "Failed to touch bones registry:  ${bones_registry}"
 
   oldpwd=$PWD
   cd $local_bones_dir/
