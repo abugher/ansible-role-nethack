@@ -14,12 +14,23 @@
              bones_files=()
             lock_timeout=10
              upload_pass=0
+                   locks=()
+    puke_recursion_count=0
 
 
-function puke {
+puke() {
+  puke_recursion_count=$(( puke_recursion_count + 1 ))
   ret=$1
   shift
-  echo "BLEAH:  ${@}"
+  if test 1 -eq $puke_recursion_count; then
+    echo "BLEAH:  ${@}"
+    for lock in "${locks[@]}"; do
+      echo "DEBUG:  Unlocking:  ${lock}"
+      unlock $lock
+    done
+  else
+    echo "DOUBLE BLEAH:  ${@}"
+  fi
   exit $ret
 }
 
@@ -62,21 +73,33 @@ lock() {
 
     echo $USER@$HOSTNAME > $file_lock_dir/pid.$$
   done
+  locks+=( $file_lock_dir )
 }
 
 
 lock_dir() {
   dir="${1}"
   lock "${dir}/${lock_dir}"
-  #echo "Locked:  ${dir}"
 }
+
+unlock() {
+  file_lock_dir="${1}"
+  rm "${file_lock_dir}/pid.${$}" || puke $? "Failed to remove PID file:  ${file_lock_dir}/pid.${$}"
+  rmdir "${file_lock_dir}" || puke $? "Failed to remove lock dir:  ${file_lock_dir}"
+  locks_backup=("${locks[@]}")
+  locks=()
+  for lock in "${locks_backup[@]}"; do
+    if ! test "${file_lock_dir}" == "${lock}"; then
+      locks+=( $lock )
+    fi
+  done
+}
+
 
 
 unlock_dir() {
   dir="${1}"
-  rm $dir/$lock_dir/pid.$$ || puke $? "Failed to remove PID file."
-  rmdir $dir/$lock_dir || puke $? "Failed to remove lock file."
-  #echo "Unlocked:  ${dir}"
+  unlock $dir/$lock_dir
 }
 
 
@@ -84,16 +107,12 @@ lock_file() {
   file="${1}"
   file_lock_dir=$(sed -E 's/\/([^\/]*)$/\/.lock.\1/' <<< $file)
   lock $file_lock_dir
-  #echo "Locked:  $file"
 }
 
 
 unlock_file() {
   file="${1}"
-  file_lock_dir=$(sed -E 's/\/([^\/]*)$/\/.lock.\1/' <<< $file)
-  rm $file_lock_dir/pid.$$ || puke $? "Failed to remove PID file."
-  rmdir $file_lock_dir || puke $? "Failed to remove lock file."
-  #echo "Unlocked:  ${file}"
+  unlock $(sed -E 's/\/([^\/]*)$/\/.lock.\1/' <<< $file)
 }
 
 
