@@ -1,11 +1,17 @@
+# Install
+
+  ./bin/install_role_to_hosts nethack <hosts>
+
 WARNING:  Old save files (and bones files, probably, if you keep those
 locally) will be removed by the 'make install' process.  You can set
 them aside manually before an upgrade, at your discretion.
 
-TODO:
+# Configure
 
-- Failure handling.  If something goes wrong, especially if a lock
-  or unlock fails, clean up all locks before bailing out if possible.
+Add your user to the ''games'' group and to the ''fuse'' group if
+present.
+
+# To Do
 
 - Collision handling.  Before every move operation, check whether there
   is a same-named file.  Don't clobber it.  Look up whether bones files
