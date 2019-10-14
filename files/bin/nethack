@@ -145,7 +145,9 @@ upload_bones_files() {
         lock_file $bones_registry
         bones_entry=$(grep " - ${bones_file}\$" $bones_registry)
         echo "       Consumed:  ${bones_entry}"
-        grep -v " - ${bones_file}\$" $bones_registry "${bones_registry}.tmp" || puke $? "Failed to create temporary file:  ${bones_registry}.tmp"
+        > "${bones_registry}.tmp" || puke $? "Failed to create/blank temporary file:  ${bones_registry}.tmp"
+        # Don't fail if grep fails.  The bones registry may be empty.
+        grep -v " - ${bones_file}\$" $bones_registry > "${bones_registry}.tmp"
         mv $bones_registry.tmp $bones_registry || puke $? "Failed to overwrite bones registry."
         unlock_file $bones_registry
       fi
@@ -165,7 +167,9 @@ upload_bones_files() {
         if grep -q " - ${bones_file}\$" $bones_registry; then
           overwritten_bones_entry=$(grep " - ${bones_file}\$" $bones_registry)
           echo "    Overwriting:  ${overwritten_bones_entry}"
-          grep -v " - ${bones_file}\$" $bones_registry "${bones_registry}.tmp" || puke $? "Failed to create temporary file:  ${bones_registry}.tmp"
+          > "${bones_registry}.tmp" || puke $? "Failed to create/blank temporary file:  ${bones_registry}.tmp"
+          # Don't fail if grep fails.  The bones registry may be empty.
+          grep -v " - ${bones_file}\$" $bones_registry > "${bones_registry}.tmp"
           mv $bones_registry.tmp $bones_registry || puke $? "Failed to overwrite bones registry."
         fi
         echo "${bones_entry}" >> $bones_registry
