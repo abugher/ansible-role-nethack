@@ -19,15 +19,15 @@ install_packages:
   - 'bison'
   - 'build-essential'
 unpack_tarballs:
-  - src:                "{{ role_path }}/files/source/nethack-362-src.tgz"
+  - src:                "{{ role_path }}/files/source/nethack-366-src.tgz"
     dest:               '/usr/local/src'
-    creates:            '/usr/local/src/nethack-3.6.2'
+    creates:            '/usr/local/src/NetHack-NetHack-3.6.6_Released'
 scripts:
-  - script:             "{{ role_path }}/files/scripts/build_nethack_3.6.2"
-    creates:            '/usr/local/src/nethack-3.6.2/src/nethack'
+  - script:             "{{ role_path }}/files/scripts/build_nethack_3.6.6"
+    creates:            '/usr/local/src/NetHack-NetHack-3.6.6_Released/src/nethack'
 commands:
   - command:            'make install'
-    chdir:              '/usr/local/src/nethack-3.6.2'
+    chdir:              '/usr/local/src/NetHack-NetHack-3.6.6_Released'
     creates:            '/usr/local/games/lib/nethackdir/nethack-but-just-overwrite-it'
     user:               'root'
 install_files:
