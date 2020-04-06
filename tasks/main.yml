@@ -6,5 +6,9 @@
 - include:              '../tasks/commands.yml'
   when:                 scripts_result.changed
 - include:              '../tasks/install_files.yml'
+- include:              '../tasks/adjust_files.yml'
+  vars:
+    adjust_files:       "{{ adjust_files_insecure }}"
+  when:                 "'insecure' in group_names"
 - include:              '../tasks/lines_in_files.yml'
 - include:              '../tasks/known_hosts.yml'

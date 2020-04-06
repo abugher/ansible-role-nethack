@@ -18,6 +18,16 @@ install_packages:
   - 'flex'
   - 'bison'
   - 'build-essential'
+  - 'screen'
+adjust_files_insecure:
+  - owner:              'root'
+    group:              'root'
+    mode:               '4755'
+    path:               '/usr/bin/screen'
+  - owner:              'root'
+    group:              'root'
+    mode:               '0755'
+    path:               '/run/screen'
 unpack_tarballs:
   - src:                "{{ role_path }}/files/source/nethack-366-src.tgz"
     dest:               '/usr/local/src'
