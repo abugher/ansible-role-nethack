@@ -35,16 +35,22 @@ puke() {
 }
 
 
-mount_remote_bones_dir () {
+mount_remote_bones_dir() {
   echo "${USER}:${remote_uid}" > $uidfile
   echo "games:${remote_gid}" > $gidfile
   mkdir -p $remote_bones_dir || puke $? "Failed to mkdir:  ${remote_bones_dir}"
   if ! mountpoint $remote_bones_dir > /dev/null; then
-    chown :games /tmp/bones || puke $? "Failed to create mount point for remote shared bones."
+#    chown :games $remote_bones_dir || puke $? "Failed to set group ownership on mount point for remote shared bones."
     sshfs \
       -o idmap=file,uidfile=$uidfile,gidfile=$gidfile,allow_other,reconnect \
       $remote_bones_url $remote_bones_dir || puke $? "Failed to mount:  ${remote_bones_dir}"
   fi
+}
+
+
+unmount_remote_bones_dir() {
+  fusermount -u $remote_bones_dir || puke $? "Failed to unmount remote shared bones."
+  rmdir $remote_bones_dir || puke $? "Failed to remove mount point for remote shared bones."
 }
 
 
@@ -123,7 +129,7 @@ file_is_locked() {
 }
 
 
-release_bones_files() {
+unlock_local_bones_files() {
   for bones_file in "${bones_files[@]}"; do
     unlock_file $local_bones_dir/$bones_file
   done
@@ -136,7 +142,6 @@ upload_bones_files() {
   lock_dir $version_dir
   mkdir -p "${version_dir}" || puke $? "Failed to create shared bones directory:  ${version_dir}"
   oldpwd=$PWD
-  cd $version_dir/
   for bones_file in "${bones_files[@]}"; do
     if ! file_is_locked $local_bones_dir/$bones_file; then
       if test -e $local_bones_dir/$bones_file; then
@@ -236,9 +241,11 @@ lock_dir $remote_bones_dir
 upload_bones_files
 download_bones_files
 unlock_dir $remote_bones_dir
+unmount_remote_bones_dir
 play
-release_bones_files
+unlock_local_bones_files
 mount_remote_bones_dir
 lock_dir $remote_bones_dir
 upload_bones_files
 unlock_dir $remote_bones_dir
+unmount_remote_bones_dir
