@@ -56,7 +56,15 @@ install_files:
     mode:               '0755'
     src:                "{{ role_path }}/files/conf/sysconf"
     dest:               '/usr/local/games/lib/nethackdir/sysconf'
+  - owner:              'root'
+    group:              'root'
+    mode:               '0644'
+    src:                'files/conf/nethackrc'
+    dest:               '/etc/nethackrc'
 lines_in_files:
+  - dest:               '/etc/bash.bashrc'
+    line:               "export NETHACKOPTIONS='@/etc/nethackrc'"
+    regexp:             'NETHACKOPTIONS='
   - dest:               '/etc/fuse.conf'
     line:               'user_allow_other'
     regexp:             'user_allow_other'

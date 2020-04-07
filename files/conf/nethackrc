@@ -1,0 +1,35 @@
+# ~/.nethackrc or /etc/nethackrc
+# https://nethackwiki.com/wiki/Options
+#
+# See also ~/.Xresources or /etc/X11/Xresources/x11-common for many
+# nethack-specific changes, such as color tweaks.
+#
+# If you want to customize these options, copy /etc/nethackrc to ~/.nethackrc
+# and export NETHACKOPTIONS="@${HOME}/.nethackrc" in ~/.bashrc .
+
+# User configuration example 1:
+#OPTIONS=name:Jane,role:wizard,race:elf,gender:female,align:chaotic
+#OPTIONS=catname:whiskers,dogname:fido,fruit:slime mold
+
+# User configuration example 2:
+#OPTIONS=name:John,role:knight,race:human,gender:male,align:lawful
+#OPTIONS=catname:mittens,dogname:rex,fruit:tangerine
+
+# Interface tweaks.
+OPTIONS=hilite_pet,showexp,showscore,showrace,time,color,menucolors,msg_window:full,boulder=0
+# Show warnings about interface changes made only after version 3.4.3.
+OPTIONS=suppress_alert:3.4.3
+# Don't pick things up without being asked.  If I'm wielding a pickaxe and walk into a wall, dig.
+OPTIONS=!autopickup,autodig
+# Leave me alone; I'm playing a game.
+OPTIONS=!mail
+# Ask me if I'm sure about certain actions.
+OPTIONS=paranoid_confirmation:Confirm quit attack pray wand-break Were-change Remove
+
+# Use colors to highlight dangerous or desirable things.
+MENUCOLOR="blessed"=green                                                
+MENUCOLOR="holy"=green                                                   
+MENUCOLOR=" cursed"=red                                                   
+MENUCOLOR="unholy"=red                                                   
+#MENUCOLOR=" cursed .* (being worn)"=orange&underline
+MENUCOLOR="cancellation"=orange
