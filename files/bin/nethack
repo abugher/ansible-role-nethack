@@ -156,7 +156,7 @@ upload_bones_files() {
         mv $bones_registry.tmp $bones_registry || puke $? "Failed to overwrite bones registry."
         unlock_file $bones_registry
       fi
-      echo "        Uploaded: $(stat -c %y ${bones_file}) - ${bones_file}" 
+      echo "        Uploaded: $(stat -c %y "${version_dir}/${bones_file}") - ${bones_file}" 
     else
       echo "Skipped (locked):  ${bones_file}"
     fi
@@ -220,7 +220,7 @@ download_bones_files() {
     bones_entry="$(stat -c %y "${version_dir}/${bones_file}" | sed 's/\.[0-9]*//') - ${bones_file}"
     lock_file $local_bones_dir/$bones_file
     mv $version_dir/$bones_file $local_bones_dir/$bones_file || puke $? "failed to move ${bones_file}"
-    echo "      Downloaded: $(stat -c %y ${bones_file}) - ${bones_file}"
+    echo "      Downloaded: $(stat -c %y "${local_bones_dir}/${bones_file}") - ${bones_file}"
     let download_count++
   done
   cd -
