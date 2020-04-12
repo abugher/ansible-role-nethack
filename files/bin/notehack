@@ -11,17 +11,28 @@ notedir=~/notes/nethack
 
 mkdir -p $notedir || {
   echo -e "Error:  Failed to mkdir ${notedir} ." >&2
-  cd -
   exit 1
 }
 
 cd $notedir || {
   echo -e "Error:  Failed to cd ${notedir} ." >&2
-  cd -
   exit 1
 }
 
 f=$(ls -tr | grep -v template | tail -n 1)
+
+if ! test -e template.txt; then
+  cp /etc/notehack/template.txt template.txt
+fi
+
+if ! grep . <<< "${f}"; then
+  f=$(stamp).txt || {
+    echo -e "Error:  Failed to stamp." >&2
+    cd -
+    exit 1
+  }
+  cp template.txt "${f}"
+fi
 
 # -n for "new" -- don't edit; just create new profile
 if test "${1}" = "-n"; then
