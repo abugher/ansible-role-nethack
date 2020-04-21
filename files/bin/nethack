@@ -55,6 +55,7 @@ unmount_remote_bones_dir() {
 
 
 lock() {
+  kick_lock "${1}"
   file_lock_dir="${1}"
   i=0
   while ! test -f $file_lock_dir/pid.$$; do
@@ -65,21 +66,31 @@ lock() {
       if test $i -ge $lock_timeout; then
         puke $? "Failed to acquire lock:  $file_lock_dir"
       fi
-      for pid_file in $file_lock_dir/pid.*; do
-        pid=$(sed 's/.*\.//g' <<< $pid_file)
-        if test '*' == "${pid}"; then
-          continue
-        fi
-        read user < $pid_file
-        echo "Lock held by ${user} for PID ${pid} at:  ${file_lock_dir}"
-      done
       sleep 1
       i=$((i+1))
     done
-
-    echo $USER@$HOSTNAME > $file_lock_dir/pid.$$
+    echo "${USER}@${HOSTNAME}" > $file_lock_dir/pid.$$
   done
   locks+=( $file_lock_dir )
+}
+
+
+kick_lock() {
+  file_lock_dir="${1}"
+  for pid_file in "${file_lock_dir}/pid."*; do
+    pid="$(sed 's/.*\.//g' <<< $pid_file)"
+    if test '*' == "${pid}"; then
+      continue
+    fi
+    read user host <<< $(sed 's/@/ /' $pid_file)
+    echo "Lock held by ${user} on ${host} for process ${pid} in lock file:  ${file_lock_dir}"
+    if test "${HOSTNAME}" = "${host}"; then
+      if ! ps -p "${pid}" >/dev/null 2>&1; then
+        rm "${pid_file}"
+      fi
+    fi
+  done
+  rmdir "${file_lock_dir}" > /dev/null 2>&1
 }
 
 
@@ -87,6 +98,13 @@ lock_dir() {
   dir="${1}"
   lock "${dir}/${lock_dir}"
 }
+
+
+kick_lock_dir() {
+  dir="${1}"
+  kick_lock "${dir}/${lock_dir}"
+}
+
 
 unlock() {
   file_lock_dir="${1}"
@@ -102,10 +120,9 @@ unlock() {
 }
 
 
-
 unlock_dir() {
   dir="${1}"
-  unlock $dir/$lock_dir
+  unlock "${dir}/${lock_dir}"
 }
 
 
@@ -113,6 +130,13 @@ lock_file() {
   file="${1}"
   file_lock_dir=$(sed -E 's/\/([^\/]*)$/\/.lock.\1/' <<< $file)
   lock $file_lock_dir
+}
+
+
+kick_lock_file() {
+  file="${1}"
+  file_lock_dir=$(sed -E 's/\/([^\/]*)$/\/.lock.\1/' <<< $file)
+  kick_lock $file_lock_dir
 }
 
 
@@ -143,6 +167,7 @@ upload_bones_files() {
   mkdir -p "${version_dir}" || puke $? "Failed to create shared bones directory:  ${version_dir}"
   oldpwd=$PWD
   for bones_file in "${bones_files[@]}"; do
+    kick_lock_file "${bones_file}"
     if ! file_is_locked $local_bones_dir/$bones_file; then
       if test -e $local_bones_dir/$bones_file; then
         mv $local_bones_dir/$bones_file $version_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
