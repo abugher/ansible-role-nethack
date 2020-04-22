@@ -25,7 +25,6 @@ puke() {
   if test 1 -eq $puke_recursion_count; then
     echo "BLEAH:  ${@}"
     for lock in "${locks[@]}"; do
-      echo "DEBUG:  Unlocking:  ${lock}"
       unlock $lock
     done
   else
@@ -77,7 +76,7 @@ lock() {
 
 kick_lock() {
   file_lock_dir="${1}"
-  for pid_file in "${file_lock_dir}/pid."*; do
+  for pid_file in ${file_lock_dir}/pid.*; do
     pid="$(sed 's/.*\.//g' <<< $pid_file)"
     if test '*' == "${pid}"; then
       continue
@@ -167,8 +166,8 @@ upload_bones_files() {
   mkdir -p "${version_dir}" || puke $? "Failed to create shared bones directory:  ${version_dir}"
   oldpwd=$PWD
   for bones_file in "${bones_files[@]}"; do
-    kick_lock_file "${bones_file}"
-    if ! file_is_locked $local_bones_dir/$bones_file; then
+    kick_lock_file "${local_bones_dir}/${bones_file}"
+    if ! file_is_locked "${local_bones_dir}/${bones_file}"; then
       if test -e $local_bones_dir/$bones_file; then
         mv $local_bones_dir/$bones_file $version_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
       else
@@ -187,6 +186,7 @@ upload_bones_files() {
     fi
   done
   for bones_file in $(ls $local_bones_dir | grep '^bon'); do
+    kick_lock_file "${local_bones_dir}/${bones_file}"
     bones_file=$(echo $bones_file | sed 's/.*\///g')
     bones_entry="$(stat -c %y "${local_bones_dir}/${bones_file}") - ${bones_file}"
     if ! file_is_locked $local_bones_dir/$bones_file; then
