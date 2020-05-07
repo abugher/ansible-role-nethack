@@ -6,6 +6,7 @@
 - include:              '../tasks/commands.yml'
   when:                 scripts_result.changed
 - include:              '../tasks/install_files.yml'
+- include:              '../tasks/symlinks.yml'
 - include:              '../tasks/adjust_files.yml'
   vars:
     adjust_files:       "{{ adjust_files_insecure }}"

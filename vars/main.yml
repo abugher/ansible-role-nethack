@@ -61,6 +61,11 @@ install_files:
     mode:               '0644'
     src:                'files/conf/nethackrc'
     dest:               '/etc/nethackrc'
+symlinks:
+  - owner:              'root'
+    group:              'root'
+    src:                '/usr/local/bin/nethack'
+    dest:               '/usr/local/bin/recover'
 lines_in_files:
   - dest:               '/etc/bash.bashrc'
     line:               "export NETHACKOPTIONS='@/etc/nethackrc'"
