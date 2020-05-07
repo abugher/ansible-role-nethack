@@ -1,8 +1,8 @@
 #!/bin/bash
                  nethack='/usr/local/games/nethack'
                  version=$(head -n 2 $nethack | tail -n 1 | awk '{print $3}')
-         local_bones_dir='/usr/local/games/lib/nethackdir'
-          bones_registry="${local_bones_dir}/.bones_registry.${USER}"
+              nethackdir='/usr/local/games/lib/nethackdir'
+          bones_registry="${nethackdir}/.bones_registry.${USER}"
         remote_bones_dir="/tmp/bones"
              version_dir="${remote_bones_dir}/${version}"
         remote_bones_url="cryptkeeper@neuronpointer.net:bones"
@@ -16,6 +16,7 @@
              upload_pass=0
                    locks=()
     puke_recursion_count=0
+         self_short_name="$(sed 's/^.*\///g' <<< "${0}")"
 
 
 puke() {
@@ -154,7 +155,7 @@ file_is_locked() {
 
 unlock_local_bones_files() {
   for bones_file in "${bones_files[@]}"; do
-    unlock_file $local_bones_dir/$bones_file
+    unlock_file $nethackdir/$bones_file
   done
 }
 
@@ -166,10 +167,10 @@ upload_bones_files() {
   mkdir -p "${version_dir}" || puke $? "Failed to create shared bones directory:  ${version_dir}"
   oldpwd=$PWD
   for bones_file in "${bones_files[@]}"; do
-    kick_lock_file "${local_bones_dir}/${bones_file}"
-    if ! file_is_locked "${local_bones_dir}/${bones_file}"; then
-      if test -e $local_bones_dir/$bones_file; then
-        mv $local_bones_dir/$bones_file $version_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
+    kick_lock_file "${nethackdir}/${bones_file}"
+    if ! file_is_locked "${nethackdir}/${bones_file}"; then
+      if test -e $nethackdir/$bones_file; then
+        mv $nethackdir/$bones_file $version_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
       else
         lock_file $bones_registry
         bones_entry=$(grep " - ${bones_file}\$" $bones_registry)
@@ -185,12 +186,12 @@ upload_bones_files() {
       echo "Skipped (locked):  ${bones_file}"
     fi
   done
-  for bones_file in $(ls $local_bones_dir | grep '^bon'); do
-    kick_lock_file "${local_bones_dir}/${bones_file}"
+  for bones_file in $(ls $nethackdir | grep '^bon'); do
+    kick_lock_file "${nethackdir}/${bones_file}"
     bones_file=$(echo $bones_file | sed 's/.*\///g')
-    bones_entry="$(stat -c %y "${local_bones_dir}/${bones_file}") - ${bones_file}"
-    if ! file_is_locked $local_bones_dir/$bones_file; then
-      mv $local_bones_dir/$bones_file $version_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
+    bones_entry="$(stat -c %y "${nethackdir}/${bones_file}") - ${bones_file}"
+    if ! file_is_locked $nethackdir/$bones_file; then
+      mv $nethackdir/$bones_file $version_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
       if test $upload_pass -gt 1; then
         echo "             New: ${bones_entry}"
         lock_file $bones_registry
@@ -226,7 +227,7 @@ download_bones_files() {
   touch $bones_registry || puke $? "Failed to touch bones registry:  ${bones_registry}"
 
   oldpwd=$PWD
-  cd $local_bones_dir/
+  cd $nethackdir/
   download_count=0
   for bones_file in $(ls $version_dir | grep ^bon | sort -R); do
     if test $download_count -ge $download_quota; then 
@@ -243,9 +244,9 @@ download_bones_files() {
     # decimal places of precision are kept, and subsequent comparison errors.
     # How many bones files can you generate per second, anyway?
     bones_entry="$(stat -c %y "${version_dir}/${bones_file}" | sed 's/\.[0-9]*//') - ${bones_file}"
-    lock_file $local_bones_dir/$bones_file
-    mv $version_dir/$bones_file $local_bones_dir/$bones_file || puke $? "failed to move ${bones_file}"
-    echo "      Downloaded: $(stat -c %y "${local_bones_dir}/${bones_file}") - ${bones_file}"
+    lock_file $nethackdir/$bones_file
+    mv $version_dir/$bones_file $nethackdir/$bones_file || puke $? "failed to move ${bones_file}"
+    echo "      Downloaded: $(stat -c %y "${nethackdir}/${bones_file}") - ${bones_file}"
     let download_count++
   done
   cd -
@@ -254,23 +255,58 @@ download_bones_files() {
 
 
 play() {
+  mount_remote_bones_dir
+  lock_dir $remote_bones_dir
+  upload_bones_files
+  download_bones_files
+  unlock_dir $remote_bones_dir
+  unmount_remote_bones_dir
   echo "Starting nethack."
   $nethack
-
   echo "nethack returned:  $?"
+  unlock_local_bones_files
+  mount_remote_bones_dir
+  lock_dir $remote_bones_dir
+  upload_bones_files
+  unlock_dir $remote_bones_dir
+  unmount_remote_bones_dir
 }
 
 
-mount_remote_bones_dir
-lock_dir $remote_bones_dir
-upload_bones_files
-download_bones_files
-unlock_dir $remote_bones_dir
-unmount_remote_bones_dir
-play
-unlock_local_bones_files
-mount_remote_bones_dir
-lock_dir $remote_bones_dir
-upload_bones_files
-unlock_dir $remote_bones_dir
-unmount_remote_bones_dir
+recover() {
+  bases=(
+    $(
+      # Maybe we shouldn't recover everyone's game...
+      ls "${nethackdir}" \
+      | grep lock \
+      | sed 's/\..*$//' \
+      | uniq
+    )
+  )
+  echo "Recovering games - base names:"
+  for base in "${bases[@]}"; do
+    echo "  '${base}'"
+  done
+  if test 0 -lt "${#bases[@]}"; then
+    "${nethackdir}"/recover -d "${nethackdir}" "${bases[@]}"
+    echo "Recovery finished.  Results not checked."
+  else
+    echo "No games to recover."
+  fi
+  for base in "${bases[@]}"; do
+    echo "Adjusting permissions for:  '${base}'"
+    chown :games "${nethackdir}"/"${base}"
+  done
+}
+
+
+case "${self_short_name}" in
+  nethack)
+    play
+    ;;
+  recover)
+    recover
+    ;;
+  *)
+    puke 1 "I don't know how to be '${self_short_name}'.  I'm more of a nethack kind of script."
+esac
