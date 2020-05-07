@@ -255,6 +255,9 @@ download_bones_files() {
 
 
 play() {
+  if pgrep -lxu "${USER}" nethack; then
+    puke 1 "You're playing enough nethack for now."
+  fi
   mount_remote_bones_dir
   lock_dir $remote_bones_dir
   upload_bones_files
@@ -274,7 +277,7 @@ play() {
 
 
 recover() {
-  if pgrep -lu "${USER}" nethack; then
+  if pgrep -lxu "${USER}" nethack; then
     puke 1 "Attempted to recover while a game is active."
   fi
   bases=(
