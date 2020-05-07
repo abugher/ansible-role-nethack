@@ -276,18 +276,19 @@ play() {
 recover() {
   bases=(
     $(
-      # Maybe we shouldn't recover everyone's game...
-      ls "${nethackdir}" \
+      find "${nethackdir}" -user "${USER}" \
+      | sed 's/^.*\///g' \
+      | grep -v '^\.' \
       | grep lock \
       | sed 's/\..*$//' \
       | uniq
     )
   )
-  echo "Recovering games - base names:"
-  for base in "${bases[@]}"; do
-    echo "  '${base}'"
-  done
   if test 0 -lt "${#bases[@]}"; then
+    echo "Recovering games - base names:"
+    for base in "${bases[@]}"; do
+      echo "  '${base}'"
+    done
     "${nethackdir}"/recover -d "${nethackdir}" "${bases[@]}"
     echo "Recovery finished.  Results not checked."
   else
