@@ -274,6 +274,9 @@ play() {
 
 
 recover() {
+  if pgrep -lu "${USER}" nethack; then
+    puke 1 "Attempted to recover while a game is active."
+  fi
   bases=(
     $(
       find "${nethackdir}" -user "${USER}" \
