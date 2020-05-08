@@ -254,10 +254,16 @@ download_bones_files() {
 }
 
 
+nethack_is_running() {
+  grep -q "${nethackdir}/nethack" <<< $(ps -elf)
+}
+
+
 play() {
-  if pgrep -lxu "${USER}" nethack; then
+  if nethack_is_running; then
     puke 1 "You're playing enough nethack for now."
   fi
+  recover
   mount_remote_bones_dir
   lock_dir $remote_bones_dir
   upload_bones_files
@@ -277,7 +283,7 @@ play() {
 
 
 recover() {
-  if pgrep -lxu "${USER}" nethack; then
+  if nethack_is_running; then
     puke 1 "Attempted to recover while a game is active."
   fi
   bases=(
