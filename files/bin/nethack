@@ -271,8 +271,11 @@ play() {
   unlock_dir $remote_bones_dir
   unmount_remote_bones_dir
   echo "Starting nethack."
+  if mesg; then mesg=y; else mesg=n; fi
+  mesg n
   $nethack
   echo "nethack returned:  $?"
+  mesg "${mesg}"
   unlock_local_bones_files
   mount_remote_bones_dir
   lock_dir $remote_bones_dir
