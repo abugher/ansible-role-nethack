@@ -1,0 +1,7 @@
+#!/bin/bash
+games_members="$(getent group games | sed 's/^.*://g')"
+screen -d -m -S nethack
+screen -S nethack -X multiuser on
+screen -S nethack -X acladd "${games_members}"
+screen -S nethack -X aclchg "${games_members}" -w '#'
+screen -r nethack

@@ -54,6 +54,11 @@ install_files:
   - owner:              'root'
     group:              'root'
     mode:               '0755'
+    src:                "{{ role_path }}/files/bin/screenhack"
+    dest:               '/usr/local/bin/screenhack'
+  - owner:              'root'
+    group:              'root'
+    mode:               '0755'
     src:                "{{ role_path }}/files/conf/sysconf"
     dest:               '/usr/local/games/lib/nethackdir/sysconf'
   - owner:              'root'
