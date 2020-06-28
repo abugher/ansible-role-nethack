@@ -255,7 +255,7 @@ download_bones_files() {
 
 
 nethack_is_running() {
-  grep -q "${nethackdir}/nethack" <<< $(ps -elf)
+  grep "${nethackdir}/nethack" <<< $(ps -elf) | awk '{print $3}' | grep -q "^${USER}"'$'
 }
 
 

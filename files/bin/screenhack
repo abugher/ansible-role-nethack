@@ -7,4 +7,4 @@ screen -S nethack -X multiuser on
 screen -S nethack -X acladd "${games_members}"
 screen -S nethack -X aclchg "${games_members}" -w '#'
 screen -S nethack -X aclchg "${USER}" +w '#'
-screen -r nethack
+screen -dr nethack
