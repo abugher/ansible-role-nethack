@@ -171,6 +171,7 @@ upload_bones_files() {
     if ! file_is_locked "${nethackdir}/${bones_file}"; then
       if test -e $nethackdir/$bones_file; then
         mv $nethackdir/$bones_file $version_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
+        echo "        Uploaded: $(stat -c %y "${version_dir}/${bones_file}") - ${bones_file}" 
       else
         lock_file $bones_registry
         bones_entry=$(grep " - ${bones_file}\$" $bones_registry)
@@ -181,7 +182,6 @@ upload_bones_files() {
         mv $bones_registry.tmp $bones_registry || puke $? "Failed to overwrite bones registry."
         unlock_file $bones_registry
       fi
-      echo "        Uploaded: $(stat -c %y "${version_dir}/${bones_file}") - ${bones_file}" 
     else
       echo "Skipped (locked):  ${bones_file}"
     fi
