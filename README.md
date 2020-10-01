@@ -13,9 +13,16 @@ present.
 
 # To Do
 
-- Collision handling.  Before every move operation, check whether there
+* Collision handling.  Before every move operation, check whether there
   is a same-named file.  Don't clobber it.  Look up whether bones files
   can be safely renamed.  Rename it and then rename it back later, if
   necessary.
 
-- Cascading failures.  Might be necessary for above.
+* Cascading failures.  Might be necessary for above.
+
+* Document:
+  * What is "upload_pass" for?
+    * Why do I care what pass I'm on?
+    * Why is there more than one pass?
+  * Why is there a registry?
+    * Is it single session or long running?
