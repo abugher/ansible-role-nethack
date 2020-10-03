@@ -161,21 +161,46 @@ unlock_local_bones_files() {
 }
 
 
+unregister() {
+  bones_entry="${1}"
+  lock_file $bones_registry
+  > "${bones_registry}.tmp" || puke $? "Failed to create/blank temporary file:  ${bones_registry}.tmp"
+  # Don't fail if grep fails.  The bones registry may be empty.
+  grep -v "^${bones_entry}\$" $bones_registry > "${bones_registry}.tmp"
+  mv $bones_registry.tmp $bones_registry || puke $? "Failed to overwrite bones registry."
+  unlock_file $bones_registry
+}
+
+
+register() {
+  bones_entry="${1}"
+  if ! grep -q "${bones_entry}" $bones_registry; then
+    lock_file $bones_registry
+    echo "${bones_entry}" >> $bones_registry || puke $? "Failed to register bones (${bones_entry}) in:  ${bones_registry}"
+    unlock_file $bones_registry
+  fi
+}
+
+
 upload_bones_files() {
   lock_dir $version_dir
   mkdir -p "${version_dir}" || puke $? "Failed to create shared bones directory:  ${version_dir}"
   oldpwd=$PWD
+  for bones_file in "${bones_files[@]}"; do
+    kick_lock_file "${nethackdir}/${bones_file}"
+    if ! test -e $nethackdir/$bones_file; then
+      bones_entry=$(grep " - ${bones_file}\$" $bones_registry)
+      echo "       Consumed:  ${bones_entry}"
+      unregister "${bones_entry}"
+    fi
+  done
   for bones_file in $(ls $nethackdir | grep '^bon'); do
     kick_lock_file "${nethackdir}/${bones_file}"
     bones_file=$(echo $bones_file | sed 's/.*\///g')
     bones_entry="$(stat -c %y "${nethackdir}/${bones_file}") - ${bones_file}"
     if ! file_is_locked $nethackdir/$bones_file; then
       if test 'set' = "${post_game:+set}"; then
-        if ! grep -q "${bones_entry}" $bones_registry; then
-          lock_file $bones_registry
-          echo "${bones_entry}" >> $bones_registry || puke $? "Failed to register bones (${bones_entry}) in:  ${bones_registry}"
-          unlock_file $bones_registry
-        fi
+        register "${bones_entry}"
       fi
       if test -e $version_dir/$bones_file; then
         echo "   Skipped (dup): ${bones_entry}"
