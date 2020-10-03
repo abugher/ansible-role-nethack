@@ -2,8 +2,10 @@
 nethack='/usr/local/games/nethack'
 version=$(head -n 2 $nethack | tail -n 1 | awk '{print $3}')
 nethackdir='/usr/local/games/lib/nethackdir'
-# Associate bones files with the user.  The user can opt out of using his own
-# bones files.
+bones_registries=()
+for bones_registry in "${nethackdir}"/.bones_registry.*; do
+  bones_registries+=( "${bones_registry}" )
+done
 bones_registry="${nethackdir}/.bones_registry.${USER}"
 remote_bones_dir="/tmp/bones"
 version_dir="${remote_bones_dir}/${version}"
@@ -13,7 +15,7 @@ uidfile="/tmp/nethack_bones_uidfile.${USER}"
 gidfile="/tmp/nethack_bones_gidfile.${USER}"
 remote_uid='995'
 remote_gid='992'
-bones_files=()
+checked_out_bones_files=()
 lock_timeout=10
 locks=()
 puke_recursion_count=0
@@ -155,9 +157,19 @@ file_is_locked() {
 
 
 unlock_local_bones_files() {
-  for bones_file in "${bones_files[@]}"; do
+  for bones_file in "${checked_out_bones_files[@]}"; do
     unlock_file $nethackdir/$bones_file
   done
+}
+
+
+register() {
+  bones_entry="${1}"
+  if ! grep -q "${bones_entry}" "${bones_registries[@]}"; then
+    lock_file $bones_registry
+    echo "${bones_entry}" >> $bones_registry || puke $? "Failed to register bones (${bones_entry}) in:  ${bones_registry}"
+    unlock_file $bones_registry
+  fi
 }
 
 
@@ -172,18 +184,8 @@ unregister() {
 }
 
 
-register() {
-  bones_entry="${1}"
-  if ! grep -q "${bones_entry}" $bones_registry; then
-    lock_file $bones_registry
-    echo "${bones_entry}" >> $bones_registry || puke $? "Failed to register bones (${bones_entry}) in:  ${bones_registry}"
-    unlock_file $bones_registry
-  fi
-}
-
-
 report_consumed_bones_files() {
-  for bones_file in "${bones_files[@]}"; do
+  for bones_file in "${checked_out_bones_files[@]}"; do
     if ! test -e $nethackdir/$bones_file; then
       bones_entry=$(grep " - ${bones_file}\$" $bones_registry)
       echo "       Consumed:  ${bones_entry}"
@@ -204,19 +206,25 @@ upload_bones_files() {
       echo "Skipped (locked):  ${bones_entry}"
       continue
     fi
+    unset checked_out
+    for checked_out_bones_file in "${checked_out_bones_files[@]}"; do
+      if test "${checked_out_bones_file}" = "${bones_file}"; then
+        checked_out=1
+      fi
+    done
     if test 'set' = "${post_game:+set}"; then
-      register "${bones_entry}"
+      if ! test 'set' = "${checked_out:+set}"; then
+        register "${bones_entry}"
+        echo "             New: ${bones_entry}"
+      fi
+    else
+      echo "        Salvaged: ${bones_entry}"
     fi
     if test -e $version_dir/$bones_file; then
       echo "   Skipped (dup): ${bones_entry}"
       continue
     fi
     mv $nethackdir/$bones_file $version_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
-    if test 'set' = "${post_game:+set}"; then
-      echo "             New: ${bones_entry}"
-    else
-      echo "        Salvaged: ${bones_entry}"
-    fi
   done
   unlock_dir $version_dir
 }
@@ -246,7 +254,7 @@ download_bones_files() {
     if test -e $nethackdir/$bones_file; then
       continue
     fi
-    bones_files+=( $bones_file )
+    checked_out_bones_files+=( $bones_file )
     # Eliminate precision past the second to avoid disagreements about how many
     # decimal places of precision are kept, and subsequent comparison errors.
     # How many bones files can you generate per second, anyway?
