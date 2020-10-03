@@ -162,7 +162,6 @@ unlock_local_bones_files() {
 
 
 upload_bones_files() {
-  touch $bones_registry || puke $? "Failed to touch bones registry:  ${bones_registry}"
   lock_dir $version_dir
   mkdir -p "${version_dir}" || puke $? "Failed to create shared bones directory:  ${version_dir}"
   oldpwd=$PWD
@@ -171,10 +170,10 @@ upload_bones_files() {
     bones_file=$(echo $bones_file | sed 's/.*\///g')
     bones_entry="$(stat -c %y "${nethackdir}/${bones_file}") - ${bones_file}"
     if ! file_is_locked $nethackdir/$bones_file; then
-      if test 'isset' = "${post_game:+isset}"; then
+      if test 'set' = "${post_game:+set}"; then
         if ! grep -q "${bones_entry}" $bones_registry; then
           lock_file $bones_registry
-          echo "${bones_entry}" >> $bones_registry
+          echo "${bones_entry}" >> $bones_registry || puke $? "Failed to register bones (${bones_entry}) in:  ${bones_registry}"
           unlock_file $bones_registry
         fi
       fi
@@ -183,7 +182,7 @@ upload_bones_files() {
         continue
       fi
       mv $nethackdir/$bones_file $version_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
-      if test 'isset' = "${post_game:+isset}"; then
+      if test 'set' = "${post_game:+set}"; then
         echo "             New: ${bones_entry}"
       else
         echo "        Salvaged: ${bones_entry}"
@@ -204,8 +203,6 @@ download_bones_files() {
     download_quota=1
   fi
 
-  touch $bones_registry || puke $? "Failed to touch bones registry:  ${bones_registry}"
-
   oldpwd=$PWD
   cd $nethackdir/
   download_count=0
@@ -214,7 +211,7 @@ download_bones_files() {
       break
     fi
     if 
-      ! test -z "${NETHACK_SKIP_SELF_BONES:+isset}" \
+      test 'set' = "${NETHACK_SKIP_SELF_BONES:+set}" \
       && grep -q " - ${bones_file}\$" $bones_registry
     then 
       continue
