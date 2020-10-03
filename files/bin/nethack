@@ -1,22 +1,23 @@
 #!/bin/bash
-                 nethack='/usr/local/games/nethack'
-                 version=$(head -n 2 $nethack | tail -n 1 | awk '{print $3}')
-              nethackdir='/usr/local/games/lib/nethackdir'
-          bones_registry="${nethackdir}/.bones_registry.${USER}"
-        remote_bones_dir="/tmp/bones"
-             version_dir="${remote_bones_dir}/${version}"
-        remote_bones_url="cryptkeeper@neuronpointer.net:bones"
-                lock_dir=".lock_dir"
-                 uidfile="/tmp/nethack_bones_uidfile.${USER}"
-                 gidfile="/tmp/nethack_bones_gidfile.${USER}"
-              remote_uid='995'
-              remote_gid='992'
-             bones_files=()
-            lock_timeout=10
-             upload_pass=0
-                   locks=()
-    puke_recursion_count=0
-         self_short_name="$(sed 's/^.*\///g' <<< "${0}")"
+nethack='/usr/local/games/nethack'
+version=$(head -n 2 $nethack | tail -n 1 | awk '{print $3}')
+nethackdir='/usr/local/games/lib/nethackdir'
+# Associate bones files with the user.  The user can opt out of using his own
+# bones files.
+bones_registry="${nethackdir}/.bones_registry.${USER}"
+remote_bones_dir="/tmp/bones"
+version_dir="${remote_bones_dir}/${version}"
+remote_bones_url="cryptkeeper@neuronpointer.net:bones"
+lock_dir=".lock_dir"
+uidfile="/tmp/nethack_bones_uidfile.${USER}"
+gidfile="/tmp/nethack_bones_gidfile.${USER}"
+remote_uid='995'
+remote_gid='992'
+bones_files=()
+lock_timeout=10
+locks=()
+puke_recursion_count=0
+self_short_name="$(sed 's/^.*\///g' <<< "${0}")"
 
 
 puke() {
@@ -161,50 +162,29 @@ unlock_local_bones_files() {
 
 
 upload_bones_files() {
-  upload_pass=$(( upload_pass + 1 ))
   touch $bones_registry || puke $? "Failed to touch bones registry:  ${bones_registry}"
   lock_dir $version_dir
   mkdir -p "${version_dir}" || puke $? "Failed to create shared bones directory:  ${version_dir}"
   oldpwd=$PWD
-  for bones_file in "${bones_files[@]}"; do
-    kick_lock_file "${nethackdir}/${bones_file}"
-    if ! file_is_locked "${nethackdir}/${bones_file}"; then
-      if test -e $nethackdir/$bones_file; then
-        mv $nethackdir/$bones_file $version_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
-        echo "        Uploaded: $(stat -c %y "${version_dir}/${bones_file}") - ${bones_file}" 
-      else
-        lock_file $bones_registry
-        bones_entry=$(grep " - ${bones_file}\$" $bones_registry)
-        echo "       Consumed:  ${bones_entry}"
-        > "${bones_registry}.tmp" || puke $? "Failed to create/blank temporary file:  ${bones_registry}.tmp"
-        # Don't fail if grep fails.  The bones registry may be empty.
-        grep -v " - ${bones_file}\$" $bones_registry > "${bones_registry}.tmp"
-        mv $bones_registry.tmp $bones_registry || puke $? "Failed to overwrite bones registry."
-        unlock_file $bones_registry
-      fi
-    else
-      echo "Skipped (locked):  ${bones_file}"
-    fi
-  done
   for bones_file in $(ls $nethackdir | grep '^bon'); do
     kick_lock_file "${nethackdir}/${bones_file}"
     bones_file=$(echo $bones_file | sed 's/.*\///g')
     bones_entry="$(stat -c %y "${nethackdir}/${bones_file}") - ${bones_file}"
     if ! file_is_locked $nethackdir/$bones_file; then
-      mv $nethackdir/$bones_file $version_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
-      if test $upload_pass -gt 1; then
-        echo "             New: ${bones_entry}"
-        lock_file $bones_registry
-        if grep -q " - ${bones_file}\$" $bones_registry; then
-          overwritten_bones_entry=$(grep " - ${bones_file}\$" $bones_registry)
-          echo "    Overwriting:  ${overwritten_bones_entry}"
-          > "${bones_registry}.tmp" || puke $? "Failed to create/blank temporary file:  ${bones_registry}.tmp"
-          # Don't fail if grep fails.  The bones registry may be empty.
-          grep -v " - ${bones_file}\$" $bones_registry > "${bones_registry}.tmp"
-          mv $bones_registry.tmp $bones_registry || puke $? "Failed to overwrite bones registry."
+      if test 'isset' = "${post_game:+isset}"; then
+        if ! grep -q "${bones_entry}" $bones_registry; then
+          lock_file $bones_registry
+          echo "${bones_entry}" >> $bones_registry
+          unlock_file $bones_registry
         fi
-        echo "${bones_entry}" >> $bones_registry
-        unlock_file $bones_registry
+      fi
+      if test -e $version_dir/$bones_file; then
+        echo "   Skipped (dup): ${bones_entry}"
+        continue
+      fi
+      mv $nethackdir/$bones_file $version_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
+      if test 'isset' = "${post_game:+isset}"; then
+        echo "             New: ${bones_entry}"
       else
         echo "        Salvaged: ${bones_entry}"
       fi
@@ -237,6 +217,9 @@ download_bones_files() {
       ! test -z "${NETHACK_SKIP_SELF_BONES:+isset}" \
       && grep -q " - ${bones_file}\$" $bones_registry
     then 
+      continue
+    fi
+    if test -e $nethackdir/$bones_file; then
       continue
     fi
     bones_files+=( $bones_file )
@@ -279,7 +262,7 @@ play() {
   unlock_local_bones_files
   mount_remote_bones_dir
   lock_dir $remote_bones_dir
-  upload_bones_files
+  post_game=1 upload_bones_files
   unlock_dir $remote_bones_dir
   unmount_remote_bones_dir
 }
