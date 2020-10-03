@@ -216,6 +216,8 @@ upload_bones_files() {
       if ! test 'set' = "${checked_out:+set}"; then
         register "${bones_entry}"
         echo "             New: ${bones_entry}"
+      else
+        echo "        Uploaded: ${bones_entry}"
       fi
     else
       echo "        Salvaged: ${bones_entry}"
@@ -264,7 +266,7 @@ download_bones_files() {
     echo "      Downloaded: $(stat -c %y "${nethackdir}/${bones_file}") - ${bones_file}"
     let download_count++
   done
-  cd -
+  cd "${oldpwd}"
   unlock_dir $version_dir
 }
 
