@@ -195,13 +195,20 @@ report_consumed_bones_files() {
 }
 
 
+bones_entry() {
+  dir="${1}"
+  bones_entry="${2}"
+  echo "$(stat -c %y "${dir}/${bones_file}" | sed 's/\.[0-9]*//') - ${bones_file}"
+}
+
+
 upload_bones_files() {
   lock_dir $version_dir
   mkdir -p "${version_dir}" || puke $? "Failed to create shared bones directory:  ${version_dir}"
   for bones_file in $(ls $nethackdir | grep '^bon'); do
     kick_lock_file "${nethackdir}/${bones_file}"
     bones_file=$(echo $bones_file | sed 's/.*\///g')
-    bones_entry="$(stat -c %y "${nethackdir}/${bones_file}") - ${bones_file}"
+    bones_entry="$(bones_entry "${nethackdir}" "${bones_file}")"
     if file_is_locked $nethackdir/$bones_file; then
       echo "Skipped (locked):  ${bones_entry}"
       continue
@@ -215,15 +222,15 @@ upload_bones_files() {
     if test 'set' = "${post_game:+set}"; then
       if ! test 'set' = "${checked_out:+set}"; then
         register "${bones_entry}"
-        echo "             New: ${bones_entry}"
+        echo "             New:  ${bones_entry}"
       else
-        echo "        Uploaded: ${bones_entry}"
+        echo "        Uploaded:  ${bones_entry}"
       fi
     else
-      echo "        Salvaged: ${bones_entry}"
+      echo "        Salvaged:  ${bones_entry}"
     fi
     if test -e $version_dir/$bones_file; then
-      echo "   Skipped (dup): ${bones_entry}"
+      echo "   Skipped (dup):  ${bones_entry}"
       continue
     fi
     mv $nethackdir/$bones_file $version_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
@@ -260,10 +267,10 @@ download_bones_files() {
     # Eliminate precision past the second to avoid disagreements about how many
     # decimal places of precision are kept, and subsequent comparison errors.
     # How many bones files can you generate per second, anyway?
-    bones_entry="$(stat -c %y "${version_dir}/${bones_file}" | sed 's/\.[0-9]*//') - ${bones_file}"
+    bones_entry="$(bones_entry "${version_dir}" "${bones_file}")"
     lock_file $nethackdir/$bones_file
     mv $version_dir/$bones_file $nethackdir/$bones_file || puke $? "failed to move ${bones_file}"
-    echo "      Downloaded: $(stat -c %y "${nethackdir}/${bones_file}") - ${bones_file}"
+    echo "      Downloaded:  ${bones_entry}"
     let download_count++
   done
   cd "${oldpwd}"
