@@ -277,9 +277,9 @@ play() {
   download_bones_files
   unlock_dir $remote_bones_dir
   unmount_remote_bones_dir
-  echo "Starting nethack."
-  if mesg; then mesg=y; else mesg=n; fi
+  if mesg >/dev/null; then mesg=y; else mesg=n; fi
   mesg n
+  echo "Starting nethack."
   $nethack
   echo "nethack returned:  $?"
   mesg "${mesg}"
