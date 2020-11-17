@@ -2,6 +2,7 @@
 nethack='/usr/local/games/nethack'
 version=$(head -n 2 $nethack | tail -n 1 | awk '{print $3}')
 nethackdir='/usr/local/games/lib/nethackdir'
+# Registries exist to identify "self" bones, in case we want to skip those.
 bones_registries=()
 for bones_registry in "${nethackdir}"/.bones_registry.*; do
   bones_registries+=( "${bones_registry}" )
@@ -177,6 +178,7 @@ unregister() {
   bones_entry="${1}"
   lock_file $bones_registry
   > "${bones_registry}.tmp" || puke $? "Failed to create/blank temporary file:  ${bones_registry}.tmp"
+  touch $bones_registry || puke $? "Failed to touch:  ${bones_registry}"
   # Don't fail if grep fails.  The bones registry may be empty.
   grep -v "^${bones_entry}\$" $bones_registry > "${bones_registry}.tmp"
   mv $bones_registry.tmp $bones_registry || puke $? "Failed to overwrite bones registry."
@@ -187,7 +189,7 @@ unregister() {
 report_consumed_bones_files() {
   for bones_file in "${checked_out_bones_files[@]}"; do
     if ! test -e $nethackdir/$bones_file; then
-      bones_entry=$(grep " - ${bones_file}\$" $bones_registry)
+      bones_entry=$(bones_entry "${nethackdir}" "${bones_file}")
       echo "       Consumed:  ${bones_entry}"
       unregister "${bones_entry}"
     fi
