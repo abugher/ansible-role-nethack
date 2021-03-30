@@ -10,7 +10,7 @@ done
 bones_registry="${nethackdir}/.bones_registry.${USER}"
 remote_bones_dir="/tmp/bones"
 version_dir="${remote_bones_dir}/${version}"
-remote_bones_url="cryptkeeper@neuronpointer.net:bones"
+remote_bones_url="cryptkeeper@neuron.neuronpointer.net:bones"
 lock_dir=".lock_dir"
 uidfile="/tmp/nethack_bones_uidfile.${USER}"
 gidfile="/tmp/nethack_bones_gidfile.${USER}"
