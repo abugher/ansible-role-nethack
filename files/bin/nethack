@@ -336,6 +336,8 @@ recover() {
   else
     echo "No games to recover."
   fi
+  # What is this supposed to do?  There was actually no file at this location
+  # when chown was attempted.  Recovery seemed to go fine, though.
   for base in "${bases[@]}"; do
     echo "Adjusting permissions for:  '${base}'"
     chown :games "${nethackdir}"/"${base}"
