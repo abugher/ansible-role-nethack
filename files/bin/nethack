@@ -12,8 +12,6 @@ remote_bones_dir="/tmp/bones"
 version_dir="${remote_bones_dir}/${version}"
 remote_bones_url="cryptkeeper@neuron.neuronpointer.net:bones"
 lock_dir=".lock_dir"
-uidfile="/tmp/nethack_bones_uidfile.${USER}"
-gidfile="/tmp/nethack_bones_gidfile.${USER}"
 remote_uid='995'
 remote_gid='992'
 checked_out_bones_files=()
@@ -40,13 +38,11 @@ puke() {
 
 
 mount_remote_bones_dir() {
-  echo "${USER}:${remote_uid}" > $uidfile
-  echo "games:${remote_gid}" > $gidfile
   mkdir -p $remote_bones_dir || puke $? "Failed to mkdir:  ${remote_bones_dir}"
   if ! mountpoint $remote_bones_dir > /dev/null; then
 #    chown :games $remote_bones_dir || puke $? "Failed to set group ownership on mount point for remote shared bones."
     sshfs \
-      -o idmap=file,uidfile=$uidfile,gidfile=$gidfile,allow_other,reconnect \
+      -o allow_other,reconnect \
       $remote_bones_url $remote_bones_dir || puke $? "Failed to mount:  ${remote_bones_dir}"
   fi
 }
@@ -205,8 +201,8 @@ bones_entry() {
 
 
 upload_bones_files() {
-  lock_dir $version_dir
   mkdir -p "${version_dir}" || puke $? "Failed to create shared bones directory:  ${version_dir}"
+  lock_dir $version_dir
   for bones_file in $(ls $nethackdir | grep '^bon'); do
     kick_lock_file "${nethackdir}/${bones_file}"
     bones_file=$(echo $bones_file | sed 's/.*\///g')
