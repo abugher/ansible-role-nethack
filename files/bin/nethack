@@ -1,4 +1,7 @@
 #!/bin/bash
+
+export NETHACKOPTIONS="@${HOME}/.nethackrc"
+
 nethack='/usr/local/games/nethack'
 version=$(head -n 2 $nethack | tail -n 1 | awk '{print $3}')
 nethackdir='/usr/local/games/lib/nethackdir'
