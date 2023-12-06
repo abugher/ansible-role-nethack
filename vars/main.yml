@@ -10,12 +10,11 @@ create_files:
 install_packages:
   - 'x11-common'
   - 'sshfs'
-  - 'libncurses5-dev'
+  - 'libncurses-dev'
   - 'byacc'
   - 'flex'
   - 'make'
   - 'gcc'
-  - 'flex'
   - 'bison'
   - 'build-essential'
   - 'screen'
@@ -29,15 +28,15 @@ adjust_files_insecure:
     mode:               '0755'
     path:               '/run/screen'
 unpack_tarballs:
-  - src:                "{{ role_path }}/files/source/nethack-366-src.tgz"
+  - src:                "{{ role_path }}/files/source/nethack-367-src.tgz"
     dest:               '/usr/local/src'
-    creates:            '/usr/local/src/NetHack-NetHack-3.6.6_Released'
+    creates:            '/usr/local/src/NetHack-3.6.7'
 scripts:
-  - script:             "{{ role_path }}/files/scripts/build_nethack_3.6.6"
-    creates:            '/usr/local/src/NetHack-NetHack-3.6.6_Released/src/nethack'
+  - script:             "{{ role_path }}/files/scripts/build_nethack_3.6.7"
+    creates:            '/usr/local/src/NetHack-3.6.7/src/nethack'
 commands:
   - command:            'make install'
-    chdir:              '/usr/local/src/NetHack-NetHack-3.6.6_Released'
+    chdir:              '/usr/local/src/NetHack-3.6.7'
     creates:            '/usr/local/games/lib/nethackdir/nethack-but-just-overwrite-it'
     user:               'root'
 install_files:

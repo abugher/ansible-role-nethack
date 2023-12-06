@@ -234,7 +234,8 @@ upload_bones_files() {
       echo "   Skipped (dup):  ${bones_entry}"
       continue
     fi
-    mv $nethackdir/$bones_file $version_dir/$bones_file || puke $? "Failed to move:  ${bones_file}"
+    cp $nethackdir/$bones_file $version_dir/$bones_file || puke $? "Failed to upload:  ${bones_file}"
+    rm $nethackdir/$bones_file || puke $? "Failed to delete locally after upload:  ${bones_file}"
   done
   unlock_dir $version_dir
 }
@@ -270,7 +271,8 @@ download_bones_files() {
     # How many bones files can you generate per second, anyway?
     bones_entry="$(bones_entry "${version_dir}" "${bones_file}")"
     lock_file $nethackdir/$bones_file
-    mv $version_dir/$bones_file $nethackdir/$bones_file || puke $? "failed to move ${bones_file}"
+    cp $version_dir/$bones_file $nethackdir/$bones_file || puke $? "Failed to download:  ${bones_file}"
+    rm $version_dir/$bones_file || puke $? "failed to delete locally after download:  ${bones_file}"
     echo "      Downloaded:  ${bones_entry}"
     let download_count++
   done
