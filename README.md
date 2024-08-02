@@ -18,5 +18,7 @@ present.
   canonical name for gameplay, and maintaining a map between those names.
 
 * Review bones compatibility among recent versions of nethack.
+  * I have seen a problem with this, in the last few weeks, as of 2024-07-31.
+  * Version segregation is necessary.
 
 * Abstract redundant code.  Start with a "register" function.

@@ -25,28 +25,60 @@ self_short_name="$(sed 's/^.*\///g' <<< "${0}")"
 
 
 play() {
+
+  # This makes sense.
   if nethack_is_running; then
     puke 1 "You're playing enough nethack for now."
   fi
+
+  # Recover if necessary.
   recover
+
+  # Mounting instead of doing scp/sftp seems questionable.  It might facilitate locking with mkdir, but there must be a way to lock over scp.
   mount_remote_bones_dir
+
+  # Check whether locking/unlocking need a mount point.
   lock_dir $remote_bones_dir
+
+  # Check whether these could use scp instead of mv/cp.
   upload_bones_files
   download_bones_files
+
+  # /lock
   unlock_dir $remote_bones_dir
+
+  # /mount
   unmount_remote_bones_dir
+
+  # Hold my calls.
   if mesg >/dev/null; then mesg=y; else mesg=n; fi
   mesg n
+
   echo "Starting nethack."
   $nethack
   echo "nethack returned:  $?"
+
+  # /hold
   mesg "${mesg}"
+
+  # WTF does this do?  There is no "lock_local_bones_files" function.  Maybe it was planned.
   unlock_local_bones_files
+
+  # Again mount.
   mount_remote_bones_dir
+  # Again lock.
   lock_dir $remote_bones_dir
+
+
+  # Review this for bugs.
   report_consumed_bones_files
+
+  # Review this for being kind of weird looking.
   post_game=1 upload_bones_files
+
+  # /lock, again
   unlock_dir $remote_bones_dir
+  # /mount, again
   unmount_remote_bones_dir
 }
 
