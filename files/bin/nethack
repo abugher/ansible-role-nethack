@@ -288,7 +288,16 @@ upload_bones_files() {
       echo "        Salvaged:  ${bones_entry}"
     fi
     if test -e $version_dir/$bones_file; then
-      echo "   Skipped (dup):  ${bones_entry}"
+      i=0
+      while true; do
+        i=$(( i + 1 ))
+        alt_bones_file="${bones_file}.alt.${i}"
+        if ! test -e $version_dir/$alt_bones_file; then
+          break
+        fi
+      done
+      cp $nethackdir/$bones_file $version_dir/$alt_bones_file || puke $? "Failed to upload:  ${bones_file}"
+      rm $nethackdir/$bones_file || puke $? "Failed to delete locally after upload:  ${bones_file}"
       continue
     fi
     cp $nethackdir/$bones_file $version_dir/$bones_file || puke $? "Failed to upload:  ${bones_file}"
@@ -309,7 +318,7 @@ download_bones_files() {
   oldpwd=$PWD
   cd $nethackdir/
   download_count=0
-  for bones_file in $(ls $version_dir | grep ^bon | sort -R); do
+  for bones_file in $(ls $version_dir | grep ^bon | grep -vE 'alt\.[0-9]+$' | sort -R); do
     if test $download_count -ge $download_quota; then 
       break
     fi
@@ -332,6 +341,18 @@ download_bones_files() {
     rm $version_dir/$bones_file || puke $? "failed to delete locally after download:  ${bones_file}"
     echo "      Downloaded:  ${bones_entry}"
     let download_count++
+  done
+  for alt_bones_file in $(ls $version_dir | grep ^bon | grep -E 'alt\.[0-9]+$' | sort); do
+    i="$(sed -E 's/^.*\.alt\.([0-9]+)$/\1/' <<< "${alt_bones_file}")"
+    i=$(( i - 1 ))
+    if test 1 -gt "${i}"; then
+      next_alt_bones_file="$(sed -E 's/\.alt\.1$//' <<< "${alt_bones_file}")"
+    else
+      next_alt_bones_file="$(sed -E "s/\.[0-9]+$/.${i}/" <<< "${alt_bones_file}")"
+    fi
+    if ! test -e $version_dir/$next_alt_bones_file; then
+      mv $version_dir/$alt_bones_file $version_dir/$next_alt_bones_file || fail "Failed to rotate bones file:  ${alt_bones_file}"
+    fi
   done
   cd "${oldpwd}"
   unlock_dir $version_dir
