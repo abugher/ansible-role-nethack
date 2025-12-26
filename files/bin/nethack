@@ -416,7 +416,7 @@ unregister() {
 
 bones_entry() {
   dir="${1}"
-  bones_entry="${2}"
+  bones_file="${2}"
   printf '%s\n' "$(stat -c %y "${dir}/${bones_file}" | sed 's/\.[0-9]*//') - ${bones_file}"
 }
 
