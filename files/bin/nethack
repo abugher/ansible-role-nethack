@@ -72,7 +72,7 @@ play() {
     mesg "${mesg_status}"
   fi
 
-  # WTF does this do?  There is no "lock_local_bones_files" function.  Maybe it was planned.
+  # There is no "lock_local_bones_files" function.  Local bones files are locked in download_bones_files().
   unlock_local_bones_files
 
   # Again mount.
