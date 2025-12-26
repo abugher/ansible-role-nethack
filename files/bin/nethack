@@ -63,9 +63,9 @@ play() {
     mesg n
   fi
 
-  echo "Starting nethack."
+  output "Starting nethack."
   $nethack
-  echo "nethack returned:  $?"
+  output "nethack returned:  $?"
 
   # /hold
   if test 'yes' = "${mesg_available}"; then
@@ -102,14 +102,19 @@ nethack_is_running() {
 fail() {
   fail_recursion_count=$(( fail_recursion_count + 1 ))
   if test 1 -eq $fail_recursion_count; then
-    echo "Error:  ${1}"
+    output "Error:  ${1}" >&2
     for lock in "${locks[@]}"; do
       unlock $lock
     done
   else
-    echo "Error while unlocking due to other error (above):  ${@}"
+    output "Error while unlocking due to other error (above):  ${1}" >&2
   fi
   exit "${2:-1}"
+}
+
+
+function output() {
+  printf '%s\n' "${1}"
 }
 
 
@@ -128,19 +133,19 @@ recover() {
     )
   )
   if test 0 -lt "${#bases[@]}"; then
-    echo "Recovering games - base names:"
+    output "Recovering games - base names:"
     for base in "${bases[@]}"; do
-      echo "  '${base}'"
+      output "  '${base}'"
     done
     "${nethackdir}"/recover -d "${nethackdir}" "${bases[@]}"
-    echo "Recovery finished.  Results not checked."
+    output "Recovery finished.  Results not checked."
   else
-    echo "No games to recover."
+    output "No games to recover."
   fi
   # What is this supposed to do?  There was actually no file at this location
   # when chown was attempted.  Recovery seemed to go fine, though.
   for base in "${bases[@]}"; do
-    echo "Adjusting permissions for:  '${base}'"
+    output "Adjusting permissions for:  '${base}'"
     chown :games "${nethackdir}"/"${base}"
   done
 }
@@ -190,7 +195,7 @@ lock() {
       sleep 1
       i=$((i+1))
     done
-    echo "${USER}@${HOSTNAME}" > $file_lock_dir/pid.$$
+    output "${USER}@${HOSTNAME}" > $file_lock_dir/pid.$$
   done
   locks+=( $file_lock_dir )
 }
@@ -218,7 +223,7 @@ kick_lock() {
       continue
     fi
     read user host <<< $(sed 's/@/ /' $pid_file)
-    echo "Lock held by ${user} on ${host} for process ${pid} in lock file:  ${file_lock_dir}"
+    output "Lock held by ${user} on ${host} for process ${pid} in lock file:  ${file_lock_dir}"
     if test "${HOSTNAME}" = "${host}"; then
       if ! ps -p "${pid}" >/dev/null 2>&1; then
         rm "${pid_file}"
@@ -274,10 +279,10 @@ upload_bones_files() {
   lock_dir $version_dir
   for bones_file in $(ls $nethackdir | grep '^bon'); do
     kick_lock_file "${nethackdir}/${bones_file}"
-    bones_file=$(echo $bones_file | sed 's/.*\///g')
+    bones_file=$(sed 's/.*\///g' <<< "${bones_file}")
     bones_entry="$(bones_entry "${nethackdir}" "${bones_file}")"
     if file_is_locked $nethackdir/$bones_file; then
-      echo "Skipped (locked):  ${bones_entry}"
+      output "Skipped (locked):  ${bones_entry}"
       continue
     fi
     unset checked_out
@@ -289,12 +294,12 @@ upload_bones_files() {
     if test 'set' = "${post_game:+set}"; then
       if ! test 'set' = "${checked_out:+set}"; then
         register "${bones_entry}"
-        echo "             New:  ${bones_entry}"
+        output "             New:  ${bones_entry}"
       else
-        echo "        Uploaded:  ${bones_entry}"
+        output "        Uploaded:  ${bones_entry}"
       fi
     else
-      echo "        Salvaged:  ${bones_entry}"
+      output "        Salvaged:  ${bones_entry}"
     fi
     if test -e $version_dir/$bones_file; then
       i=0
@@ -348,7 +353,7 @@ download_bones_files() {
     lock_file $nethackdir/$bones_file
     cp --preserve=time $version_dir/$bones_file $nethackdir/$bones_file || fail "Failed to download:  ${bones_file}" "${?}"
     rm $version_dir/$bones_file || fail "failed to delete locally after download:  ${bones_file}" "${?}"
-    echo "      Downloaded:  ${bones_entry}"
+    output "      Downloaded:  ${bones_entry}"
     let download_count++
   done
   for alt_bones_file in $(ls $version_dir | grep ^bon | grep -E 'alt\.[0-9]+$' | sort); do
@@ -372,7 +377,7 @@ report_consumed_bones_files() {
   for bones_file in "${checked_out_bones_files[@]}"; do
     if ! test -e $nethackdir/$bones_file; then
       bones_entry=$(bones_entry "${nethackdir}" "${bones_file}")
-      echo "       Consumed:  ${bones_entry}"
+      output "       Consumed:  ${bones_entry}"
       unregister "${bones_entry}"
     fi
   done
@@ -383,7 +388,7 @@ register() {
   bones_entry="${1}"
   if ! grep -q "${bones_entry}" "${bones_registries[@]}"; then
     lock_file $bones_registry
-    echo "${bones_entry}" >> $bones_registry || fail "Failed to register bones (${bones_entry}) in:  ${bones_registry}" "${?}"
+    output "${bones_entry}" >> $bones_registry || fail "Failed to register bones (${bones_entry}) in:  ${bones_registry}" "${?}"
     unlock_file $bones_registry
   fi
 }
@@ -404,7 +409,7 @@ unregister() {
 bones_entry() {
   dir="${1}"
   bones_entry="${2}"
-  echo "$(stat -c %y "${dir}/${bones_file}" | sed 's/\.[0-9]*//') - ${bones_file}"
+  output "$(stat -c %y "${dir}/${bones_file}" | sed 's/\.[0-9]*//') - ${bones_file}"
 }
 
 
