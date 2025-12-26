@@ -390,7 +390,7 @@ report_consumed_bones_files() {
 
 register() {
   bones_entry="${1}"
-  if ! grep -q "${bones_entry}" "${bones_registry}"; then
+  if ! grep -q "^${bones_entry}\$" "${bones_registry}"; then
     lock_file $bones_registry
     printf '%s\n' "${bones_entry}" >> $bones_registry || fail "Failed to register bones (${bones_entry}) in:  ${bones_registry}" "${?}"
     unlock_file $bones_registry
