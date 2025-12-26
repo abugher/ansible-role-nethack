@@ -195,7 +195,7 @@ lock() {
       sleep 1
       i=$((i+1))
     done
-    output "${USER}@${HOSTNAME}" > $file_lock_dir/pid.$$
+    printf '%s\n' "${USER}@${HOSTNAME}" > $file_lock_dir/pid.$$
   done
   locks+=( $file_lock_dir )
 }
@@ -299,6 +299,7 @@ upload_bones_files() {
         output "        Uploaded:  ${bones_entry}"
       fi
     else
+      register "${bones_entry}"
       output "        Salvaged:  ${bones_entry}"
     fi
     if test -e $version_dir/$bones_file; then
@@ -388,7 +389,7 @@ register() {
   bones_entry="${1}"
   if ! grep -q "${bones_entry}" "${bones_registries[@]}"; then
     lock_file $bones_registry
-    output "${bones_entry}" >> $bones_registry || fail "Failed to register bones (${bones_entry}) in:  ${bones_registry}" "${?}"
+    printf '%s\n' "${bones_entry}" >> $bones_registry || fail "Failed to register bones (${bones_entry}) in:  ${bones_registry}" "${?}"
     unlock_file $bones_registry
   fi
 }
@@ -409,7 +410,7 @@ unregister() {
 bones_entry() {
   dir="${1}"
   bones_entry="${2}"
-  output "$(stat -c %y "${dir}/${bones_file}" | sed 's/\.[0-9]*//') - ${bones_file}"
+  printf '%s\n' "$(stat -c %y "${dir}/${bones_file}" | sed 's/\.[0-9]*//') - ${bones_file}"
 }
 
 
