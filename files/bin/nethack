@@ -22,11 +22,19 @@ lock_timeout=10
 locks=()
 puke_recursion_count=0
 self_short_name="$(sed 's/^.*\///g' <<< "${0}")"
+if type mesg 2>/dev/null; then
+  mesg_available='yes'
+  if mesg > /dev/null; then 
+    mesg_status='y'
+  else
+    mesg_status='n'
+  fi
+else
+  mesg_available='no'
+fi
 
 
 play() {
-
-  # This makes sense.
   if nethack_is_running; then
     puke 1 "You're playing enough nethack for now."
   fi
@@ -51,15 +59,18 @@ play() {
   unmount_remote_bones_dir
 
   # Hold my calls.
-  if mesg >/dev/null; then mesg=y; else mesg=n; fi
-  mesg n
+  if test 'yes' = "${mesg_available}"; then
+    mesg n
+  fi
 
   echo "Starting nethack."
   $nethack
   echo "nethack returned:  $?"
 
   # /hold
-  mesg "${mesg}"
+  if test 'yes' = "${mesg_available}"; then
+    mesg "${mesg_status}"
+  fi
 
   # WTF does this do?  There is no "lock_local_bones_files" function.  Maybe it was planned.
   unlock_local_bones_files
