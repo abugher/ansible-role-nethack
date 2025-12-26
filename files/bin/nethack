@@ -6,10 +6,6 @@ nethack='/usr/local/games/nethack'
 version=$(head -n 2 $nethack | tail -n 1 | awk '{print $3}')
 nethackdir='/usr/local/games/lib/nethackdir'
 # Registries exist to identify "self" bones, in case we want to skip those.
-bones_registries=()
-for bones_registry in "${nethackdir}"/.bones_registry.*; do
-  bones_registries+=( "${bones_registry}" )
-done
 bones_registry="${nethackdir}/.bones_registry.${USER}"
 remote_bones_dir="/tmp/bones/${USER}"
 version_dir="${remote_bones_dir}/${version}"
@@ -346,7 +342,7 @@ download_bones_files() {
     fi
     if 
       test 'set' = "${NETHACK_SKIP_SELF_BONES:+set}" \
-      && grep -q " - ${bones_file}\$" $bones_registry
+      && grep -q "^${bones_entry}\$" $bones_registry
     then 
       continue
     fi
@@ -394,7 +390,7 @@ report_consumed_bones_files() {
 
 register() {
   bones_entry="${1}"
-  if ! grep -q "${bones_entry}" "${bones_registries[@]}"; then
+  if ! grep -q "${bones_entry}" "${bones_registry}"; then
     lock_file $bones_registry
     printf '%s\n' "${bones_entry}" >> $bones_registry || fail "Failed to register bones (${bones_entry}) in:  ${bones_registry}" "${?}"
     unlock_file $bones_registry
