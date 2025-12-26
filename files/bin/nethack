@@ -226,8 +226,13 @@ kick_lock() {
     output "Lock held by ${user} on ${host} for process ${pid} in lock file:  ${file_lock_dir}"
     if test "${HOSTNAME}" = "${host}"; then
       if ! ps -p "${pid}" >/dev/null 2>&1; then
+        output "No such PID (${pid}).  Breaking lock."
         rm "${pid_file}"
+      else
+        output "PID (${pid}) is valid.  Respecting lock."
       fi
+    else
+      output "Locking host (${host}) is not this host (${HOSTNAME}).  Respecting lock."
     fi
   done
   rmdir "${file_lock_dir}" > /dev/null 2>&1
