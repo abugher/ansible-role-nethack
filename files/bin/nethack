@@ -11,7 +11,7 @@ for bones_registry in "${nethackdir}"/.bones_registry.*; do
   bones_registries+=( "${bones_registry}" )
 done
 bones_registry="${nethackdir}/.bones_registry.${USER}"
-remote_bones_dir="/tmp/bones"
+remote_bones_dir="/tmp/bones/${USER}"
 version_dir="${remote_bones_dir}/${version}"
 remote_bones_url="cryptkeeper@neuron.neuronpointer.net:bones"
 lock_dir=".lock_dir"
