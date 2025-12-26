@@ -186,8 +186,15 @@ lock() {
   i=0
   while ! test -f $file_lock_dir/pid.$$; do
     while ! mkdir $file_lock_dir > /dev/null 2>&1; do
-      if rmdir $file_lock_dir > /dev/null 2>&1; then
-        continue
+      # It is nice to clean up abandoned directories, but it creates a race
+      # condition.
+      if test '' = "$(ls "${file_lock_dir}")"; then
+        # Imperfect race mitigation:  Just assume a second is enough time to
+        # let any concurrent process write a PID file.
+        sleep 1
+        if rmdir $file_lock_dir > /dev/null 2>&1; then
+          continue
+        fi
       fi
       if test $i -ge $lock_timeout; then
         fail "Failed to acquire lock:  $file_lock_dir" "${?}"
