@@ -42,7 +42,9 @@ play() {
   # Recover if necessary.
   recover
 
-  # Mounting instead of doing scp/sftp seems questionable.  It might facilitate locking with mkdir, but there must be a way to lock over scp.
+  # sshfs facilitates locking with mkdir.  It should be possible to use scp for
+  # file transfers and ssh for locking.  That might make the locking and
+  # unlocking functions a lot longer.
   mount_remote_bones_dir
 
   # Check whether locking/unlocking need a mount point.
