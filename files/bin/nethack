@@ -20,7 +20,7 @@ remote_gid='992'
 checked_out_bones_files=()
 lock_timeout=10
 locks=()
-puke_recursion_count=0
+fail_recursion_count=0
 self_short_name="$(sed 's/^.*\///g' <<< "${0}")"
 if type mesg 2>/dev/null; then
   mesg_available='yes'
@@ -36,7 +36,7 @@ fi
 
 play() {
   if nethack_is_running; then
-    puke 1 "You're playing enough nethack for now."
+    fail 1 "You're playing enough nethack for now."
   fi
 
   # Recover if necessary.
@@ -99,17 +99,17 @@ nethack_is_running() {
 }
 
 
-puke() {
-  puke_recursion_count=$(( puke_recursion_count + 1 ))
+fail() {
+  fail_recursion_count=$(( fail_recursion_count + 1 ))
   ret=$1
   shift
-  if test 1 -eq $puke_recursion_count; then
-    echo "BLEAH:  ${@}"
+  if test 1 -eq $fail_recursion_count; then
+    echo "Error:  ${@}"
     for lock in "${locks[@]}"; do
       unlock $lock
     done
   else
-    echo "DOUBLE BLEAH:  ${@}"
+    echo "Error while unlocking due to other error (above):  ${@}"
   fi
   exit $ret
 }
@@ -117,7 +117,7 @@ puke() {
 
 recover() {
   if nethack_is_running; then
-    puke 1 "Attempted to recover while a game is active."
+    fail 1 "Attempted to recover while a game is active."
   fi
   bases=(
     $(
@@ -149,19 +149,19 @@ recover() {
 
 
 mount_remote_bones_dir() {
-  mkdir -p $remote_bones_dir || puke $? "Failed to mkdir:  ${remote_bones_dir}"
+  mkdir -p $remote_bones_dir || fail $? "Failed to mkdir:  ${remote_bones_dir}"
   if ! mountpoint $remote_bones_dir > /dev/null; then
-#    chown :games $remote_bones_dir || puke $? "Failed to set group ownership on mount point for remote shared bones."
+#    chown :games $remote_bones_dir || fail $? "Failed to set group ownership on mount point for remote shared bones."
     sshfs \
       -o allow_other,reconnect \
-      $remote_bones_url $remote_bones_dir || puke $? "Failed to mount:  ${remote_bones_dir}"
+      $remote_bones_url $remote_bones_dir || fail $? "Failed to mount:  ${remote_bones_dir}"
   fi
 }
 
 
 unmount_remote_bones_dir() {
-  fusermount -u $remote_bones_dir || puke $? "Failed to unmount remote shared bones."
-  rmdir $remote_bones_dir || puke $? "Failed to remove mount point for remote shared bones."
+  fusermount -u $remote_bones_dir || fail $? "Failed to unmount remote shared bones."
+  rmdir $remote_bones_dir || fail $? "Failed to remove mount point for remote shared bones."
 }
 
 
@@ -187,7 +187,7 @@ lock() {
         continue
       fi
       if test $i -ge $lock_timeout; then
-        puke $? "Failed to acquire lock:  $file_lock_dir"
+        fail $? "Failed to acquire lock:  $file_lock_dir"
       fi
       sleep 1
       i=$((i+1))
@@ -200,8 +200,8 @@ lock() {
 
 unlock() {
   file_lock_dir="${1}"
-  rm "${file_lock_dir}/pid.${$}" || puke $? "Failed to remove PID file:  ${file_lock_dir}/pid.${$}"
-  rmdir "${file_lock_dir}" || puke $? "Failed to remove lock dir:  ${file_lock_dir}"
+  rm "${file_lock_dir}/pid.${$}" || fail $? "Failed to remove PID file:  ${file_lock_dir}/pid.${$}"
+  rmdir "${file_lock_dir}" || fail $? "Failed to remove lock dir:  ${file_lock_dir}"
   locks_backup=("${locks[@]}")
   locks=()
   for lock in "${locks_backup[@]}"; do
@@ -272,7 +272,7 @@ unlock_local_bones_files() {
 
 
 upload_bones_files() {
-  mkdir -p "${version_dir}" || puke $? "Failed to create shared bones directory:  ${version_dir}"
+  mkdir -p "${version_dir}" || fail $? "Failed to create shared bones directory:  ${version_dir}"
   lock_dir $version_dir
   for bones_file in $(ls $nethackdir | grep '^bon'); do
     kick_lock_file "${nethackdir}/${bones_file}"
@@ -307,12 +307,12 @@ upload_bones_files() {
           break
         fi
       done
-      cp --preserve=time $nethackdir/$bones_file $version_dir/$alt_bones_file || puke $? "Failed to upload:  ${bones_file}"
-      rm $nethackdir/$bones_file || puke $? "Failed to delete locally after upload:  ${bones_file}"
+      cp --preserve=time $nethackdir/$bones_file $version_dir/$alt_bones_file || fail $? "Failed to upload:  ${bones_file}"
+      rm $nethackdir/$bones_file || fail $? "Failed to delete locally after upload:  ${bones_file}"
       continue
     fi
-    cp --preserve=time $nethackdir/$bones_file $version_dir/$bones_file || puke $? "Failed to upload:  ${bones_file}"
-    rm $nethackdir/$bones_file || puke $? "Failed to delete locally after upload:  ${bones_file}"
+    cp --preserve=time $nethackdir/$bones_file $version_dir/$bones_file || fail $? "Failed to upload:  ${bones_file}"
+    rm $nethackdir/$bones_file || fail $? "Failed to delete locally after upload:  ${bones_file}"
   done
   unlock_dir $version_dir
 }
@@ -348,8 +348,8 @@ download_bones_files() {
     # How many bones files can you generate per second, anyway?
     bones_entry="$(bones_entry "${version_dir}" "${bones_file}")"
     lock_file $nethackdir/$bones_file
-    cp --preserve=time $version_dir/$bones_file $nethackdir/$bones_file || puke $? "Failed to download:  ${bones_file}"
-    rm $version_dir/$bones_file || puke $? "failed to delete locally after download:  ${bones_file}"
+    cp --preserve=time $version_dir/$bones_file $nethackdir/$bones_file || fail $? "Failed to download:  ${bones_file}"
+    rm $version_dir/$bones_file || fail $? "failed to delete locally after download:  ${bones_file}"
     echo "      Downloaded:  ${bones_entry}"
     let download_count++
   done
@@ -385,7 +385,7 @@ register() {
   bones_entry="${1}"
   if ! grep -q "${bones_entry}" "${bones_registries[@]}"; then
     lock_file $bones_registry
-    echo "${bones_entry}" >> $bones_registry || puke $? "Failed to register bones (${bones_entry}) in:  ${bones_registry}"
+    echo "${bones_entry}" >> $bones_registry || fail $? "Failed to register bones (${bones_entry}) in:  ${bones_registry}"
     unlock_file $bones_registry
   fi
 }
@@ -394,11 +394,11 @@ register() {
 unregister() {
   bones_entry="${1}"
   lock_file $bones_registry
-  > "${bones_registry}.tmp" || puke $? "Failed to create/blank temporary file:  ${bones_registry}.tmp"
-  touch $bones_registry || puke $? "Failed to touch:  ${bones_registry}"
+  > "${bones_registry}.tmp" || fail $? "Failed to create/blank temporary file:  ${bones_registry}.tmp"
+  touch $bones_registry || fail $? "Failed to touch:  ${bones_registry}"
   # Don't fail if grep fails.  The bones registry may be empty.
   grep -v "^${bones_entry}\$" $bones_registry > "${bones_registry}.tmp"
-  mv $bones_registry.tmp $bones_registry || puke $? "Failed to overwrite bones registry."
+  mv $bones_registry.tmp $bones_registry || fail $? "Failed to overwrite bones registry."
   unlock_file $bones_registry
 }
 
@@ -418,5 +418,5 @@ case "${self_short_name}" in
     recover
     ;;
   *)
-    puke 1 "I don't know how to be '${self_short_name}'.  I'm more of a nethack kind of script."
+    fail 1 "I don't know how to be '${self_short_name}'.  I'm more of a nethack kind of script."
 esac
