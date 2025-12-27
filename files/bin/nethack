@@ -295,7 +295,9 @@ upload_bones_files() {
       continue
     fi
     if file_is_locked $nethackdir/$bones_file; then
-      output "Skipped (locked):  ${bones_entry}"
+      # This should probably never happen, since no concurrent process should
+      # be running as the same user.
+      warn "Skipped (locked):  ${bones_entry}"
       continue
     fi
     unset checked_out
