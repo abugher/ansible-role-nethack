@@ -294,12 +294,6 @@ upload_bones_files() {
     if ! test "${USER}" = "${bones_owner}"; then
       continue
     fi
-    if file_is_locked $nethackdir/$bones_file; then
-      # This should probably never happen, since no concurrent process should
-      # be running as the same user.
-      warn "Skipped (locked):  ${bones_entry}"
-      continue
-    fi
     unset checked_out
     for checked_out_bones_file in "${checked_out_bones_files[@]}"; do
       if test "${checked_out_bones_file}" = "${bones_file}"; then
@@ -407,6 +401,8 @@ report_consumed_bones_files() {
 register() {
   bones_entry="${1}"
   if ! grep -q "^${bones_entry}\$" "${bones_registry}"; then
+    # Probably not necessary since no concurrent processes as the same user
+    # should be allowed.
     lock_file $bones_registry
     printf '%s\n' "${bones_entry}" >> $bones_registry || fail "Failed to register bones (${bones_entry}) in:  ${bones_registry}" "${?}"
     unlock_file $bones_registry
@@ -416,6 +412,8 @@ register() {
 
 unregister() {
   bones_entry="${1}"
+  # Probably not necessary since no concurrent processes as the same user
+  # should be allowed.
   lock_file $bones_registry
   > "${bones_registry}.tmp" || fail "Failed to create/blank temporary file:  ${bones_registry}.tmp" "${?}"
   touch $bones_registry || fail "Failed to touch:  ${bones_registry}" "${?}"
