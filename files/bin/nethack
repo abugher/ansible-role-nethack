@@ -334,10 +334,10 @@ upload_bones_files() {
       done
       cp --preserve=time $nethackdir/$bones_file $version_dir/$alt_bones_file || fail "Failed to upload:  ${bones_file}" "${?}"
       rm $nethackdir/$bones_file || fail "Failed to delete locally after upload:  ${bones_file}" "${?}"
-      continue
+    else
+      cp --preserve=time $nethackdir/$bones_file $version_dir/$bones_file || fail "Failed to upload:  ${bones_file}" "${?}"
+      rm $nethackdir/$bones_file || fail "Failed to delete locally after upload:  ${bones_file}" "${?}"
     fi
-    cp --preserve=time $nethackdir/$bones_file $version_dir/$bones_file || fail "Failed to upload:  ${bones_file}" "${?}"
-    rm $nethackdir/$bones_file || fail "Failed to delete locally after upload:  ${bones_file}" "${?}"
   done
   unlock_dir $version_dir
 }
