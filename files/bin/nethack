@@ -350,9 +350,6 @@ download_bones_files() {
       continue
     fi
     checked_out_bones_files+=( $bones_file )
-    # Eliminate precision past the second to avoid disagreements about how many
-    # decimal places of precision are kept, and subsequent comparison errors.
-    # How many bones files can you generate per second, anyway?
     bones_entry="$(bones_entry "${version_dir}" "${bones_file}")"
     lock_file $nethackdir/$bones_file
     cp --preserve=time $version_dir/$bones_file $nethackdir/$bones_file || fail "Failed to download:  ${bones_file}" "${?}"
@@ -414,6 +411,10 @@ unregister() {
 bones_entry() {
   dir="${1}"
   bones_file="${2}"
+
+  # Eliminate precision past the second to avoid disagreements about how many
+  # decimal places of precision are kept and subsequent comparison errors.
+  # How many bones files can you generate per second, anyway?
   printf '%s\n' "$(stat -c %y "${dir}/${bones_file}" | sed 's/\.[0-9]*//') - ${bones_file}"
 }
 
