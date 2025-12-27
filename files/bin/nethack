@@ -361,7 +361,7 @@ download_bones_files() {
     if test -e $nethackdir/$bones_file; then
       continue
     fi
-    # Avoid interference with other users.
+    # Avoid collision with other users also downloading bones.
     lock_file $nethackdir/$bones_file
     bones_entry="$(bones_entry "${version_dir}" "${bones_file}")"
     cp --preserve=time $version_dir/$bones_file $nethackdir/$bones_file || fail "Failed to download:  ${bones_file}" "${?}"
