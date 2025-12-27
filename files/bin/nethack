@@ -386,10 +386,8 @@ download_bones_files() {
 report_consumed_bones_files() {
   for bones_file in "${checked_out_bones_files[@]}"; do
     if ! test -e $nethackdir/$bones_file; then
-      # This won't work.  The file is no longer present.
-      bones_entry=$(bones_entry "${nethackdir}" "${bones_file}")
+      unregister "${checked_out_bones_entries["${bones_file}"]}"
       output "       Consumed:  ${bones_entry}"
-      unregister "${bones_entry}"
     fi
   done
 }
