@@ -401,26 +401,18 @@ report_consumed_bones_files() {
 register() {
   bones_entry="${1}"
   if ! grep -q "^${bones_entry}\$" "${bones_registry}"; then
-    # Probably not necessary since no concurrent processes as the same user
-    # should be allowed.
-    lock_file $bones_registry
     printf '%s\n' "${bones_entry}" >> $bones_registry || fail "Failed to register bones (${bones_entry}) in:  ${bones_registry}" "${?}"
-    unlock_file $bones_registry
   fi
 }
 
 
 unregister() {
   bones_entry="${1}"
-  # Probably not necessary since no concurrent processes as the same user
-  # should be allowed.
-  lock_file $bones_registry
   > "${bones_registry}.tmp" || fail "Failed to create/blank temporary file:  ${bones_registry}.tmp" "${?}"
   touch $bones_registry || fail "Failed to touch:  ${bones_registry}" "${?}"
   # Don't fail if grep fails.  The bones registry may be empty.
   grep -v "^${bones_entry}\$" $bones_registry > "${bones_registry}.tmp"
   mv $bones_registry.tmp $bones_registry || fail "Failed to overwrite bones registry." "${?}"
-  unlock_file $bones_registry
 }
 
 
