@@ -220,6 +220,7 @@ unlock() {
 
 
 kick_lock() {
+  # Removes locking by dead processes.  Does not report results.
   file_lock_dir="${1}"
   for pid_file in ${file_lock_dir}/pid.*; do
     pid="$(sed 's/.*\.//g' <<< $pid_file)"
@@ -287,7 +288,6 @@ upload_bones_files() {
   mkdir -p "${version_dir}" || fail "Failed to create shared bones directory:  ${version_dir}" "${?}"
   lock_dir $version_dir
   for bones_file in $(ls $nethackdir | grep '^bon'); do
-    kick_lock_file "${nethackdir}/${bones_file}"
     bones_file=$(sed 's/.*\///g' <<< "${bones_file}")
     bones_entry="$(bones_entry "${nethackdir}" "${bones_file}")"
     bones_owner="$(stat -c '%U' "${nethackdir}/${bones_file}")"
@@ -367,6 +367,7 @@ download_bones_files() {
     if test -e $nethackdir/$bones_file; then
       continue
     fi
+    # Avoid interference with other users.
     lock_file $nethackdir/$bones_file
     bones_entry="$(bones_entry "${version_dir}" "${bones_file}")"
     cp --preserve=time $version_dir/$bones_file $nethackdir/$bones_file || fail "Failed to download:  ${bones_file}" "${?}"
