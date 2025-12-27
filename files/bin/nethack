@@ -297,21 +297,21 @@ upload_bones_files() {
     done
     if test 'set' = "${post_game:+set}"; then
       if ! test 'set' = "${checked_out:+set}"; then
-        register "${bones_entry}"
         output "  Uploaded (new):  ${bones_entry}"
+        register "${bones_entry}"
       else
         if test "${bones_entry}" = "${checked_out_bones_entries["${bones_file}"]}"; then
           output "  Uploaded (old):  ${bones_entry}"
         else
+          output "Uploaded (grown):  ${bones_entry}"
           unregister "${checked_out_bones_entries["${bones_file}"]}"
           register "${bones_entry}"
-          output "Uploaded (grown):  ${bones_entry}"
         fi
       fi
     else
       # Assume this is self bones, although it could be another local player.
-      register "${bones_entry}"
       output "        Salvaged:  ${bones_entry}"
+      register "${bones_entry}"
     fi
     if test -e $version_dir/$bones_file; then
       i=0
@@ -386,8 +386,8 @@ download_bones_files() {
 report_consumed_bones_files() {
   for bones_file in "${checked_out_bones_files[@]}"; do
     if ! test -e $nethackdir/$bones_file; then
-      unregister "${checked_out_bones_entries["${bones_file}"]}"
       output "       Consumed:  ${bones_entry}"
+      unregister "${checked_out_bones_entries["${bones_file}"]}"
     fi
   done
 }
