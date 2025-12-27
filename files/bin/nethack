@@ -110,6 +110,11 @@ function output() {
 }
 
 
+function warn() {
+  output "Warning:  ${1}" >&2
+}
+
+
 recover() {
   if nethack_is_running; then
     fail "Attempted to recover while a game is active." 1
@@ -285,6 +290,10 @@ upload_bones_files() {
     kick_lock_file "${nethackdir}/${bones_file}"
     bones_file=$(sed 's/.*\///g' <<< "${bones_file}")
     bones_entry="$(bones_entry "${nethackdir}" "${bones_file}")"
+    bones_owner="$(stat -c '%U' "${nethackdir}/${bones_file}")"
+    if ! test "${USER}" = "${bones_owner}"; then
+      continue
+    fi
     if file_is_locked $nethackdir/$bones_file; then
       output "Skipped (locked):  ${bones_entry}"
       continue
@@ -309,7 +318,6 @@ upload_bones_files() {
         fi
       fi
     else
-      # Assume this is self bones, although it could be another local player.
       output "        Salvaged:  ${bones_entry}"
       register "${bones_entry}"
     fi
