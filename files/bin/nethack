@@ -356,6 +356,15 @@ download_bones_files() {
       test 'set' = "${NETHACK_SKIP_SELF_BONES:+set}" \
       && grep -q "^${bones_entry}\$" $bones_registry
     then 
+      # If the only non-self bones files are alts, no bones will be downloaded.
+      # Those alts will not rotate in until someone else downloads this
+      # player's bones, or until this player decides to allow their own bones.
+      # That was not planned behavior, but not necessarily a bug.  Some alts
+      # could be stuck in the crypt for a long time, but if/when other people
+      # start playing, the alts will rotate in.  So, sometimes, seemingly for
+      # no reason, an especially old and dusty bones file could crop up.  That
+      # actually seems rather appropriate to this whole clunky system built
+      # around this clunky old game.
       continue
     fi
     if test -e $nethackdir/$bones_file; then
