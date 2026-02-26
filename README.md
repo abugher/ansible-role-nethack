@@ -1,6 +1,6 @@
 # Install
 
-    ./bin/deploy-role-to-hosts nethack <hosts>
+    deploy-role-to-hosts nethack <hosts>
 
 WARNING:  Old save files (and bones files, probably, if you keep those
 locally) will be removed by the `make install` process.  You can set
