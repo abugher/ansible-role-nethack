@@ -1,4 +1,7 @@
 ---
+major:                  '5'
+minor:                  '0'
+patch:                  '0'
 create_files:
   # Copying this from existing (working) files.  Reconsider later.
   - owner:              'root'
@@ -18,47 +21,39 @@ install_packages:
   - 'bison'
   - 'build-essential'
   - 'screen'
-adjust_files_insecure:
-  - owner:              'root'
-    group:              'root'
-    mode:               '4755'
-    path:               '/usr/bin/screen'
-  - owner:              'root'
-    group:              'root'
-    mode:               '0755'
-    path:               '/run/screen'
 unpack_tarballs:
-  - src:                "{{ role_path }}/files/source/nethack-367-src.tgz"
+  - src:                "files/source/nethack-{{ major }}{{ minor }}{{ patch }}-src.tgz"
     dest:               '/usr/local/src'
-    creates:            '/usr/local/src/NetHack-3.6.7'
+    creates:            "/usr/local/src/NetHack-{{ major }}.{{ minor }}.{{ patch }}"
 scripts:
-  - script:             "{{ role_path }}/files/scripts/build_nethack_3.6.7"
-    creates:            '/usr/local/src/NetHack-3.6.7/src/nethack'
+  - script:             'scripts/build_nethack'
+    chdir:              "/usr/local/src/NetHack-{{ major }}.{{ minor }}.{{ patch }}"
+    creates:            "/usr/local/src/NetHack-{{ major }}.{{ minor }}.{{ patch }}/src/nethack"
 commands:
   - command:            'make install'
-    chdir:              '/usr/local/src/NetHack-3.6.7'
+    chdir:              "/usr/local/src/NetHack-{{ major }}.{{ minor }}.{{ patch }}"
     creates:            '/usr/local/games/lib/nethackdir/nethack-but-just-overwrite-it'
     user:               'root'
 install_files:
   - owner:              'root'
     group:              'root'
     mode:               '0755'
-    src:                "{{ role_path }}/files/bin/nethack"
+    src:                "files/bin/nethack"
     dest:               '/usr/local/bin/nethack'
   - owner:              'root'
     group:              'root'
     mode:               '0755'
-    src:                "{{ role_path }}/files/bin/notehack"
+    src:                "files/bin/notehack"
     dest:               '/usr/local/bin/notehack'
   - owner:              'root'
     group:              'root'
     mode:               '0755'
-    src:                "{{ role_path }}/files/bin/screenhack"
+    src:                "files/bin/screenhack"
     dest:               '/usr/local/bin/screenhack'
   - owner:              'root'
     group:              'root'
     mode:               '0755'
-    src:                "{{ role_path }}/files/conf/sysconf"
+    src:                "files/conf/sysconf"
     dest:               '/usr/local/games/lib/nethackdir/sysconf'
   - owner:              'root'
     group:              'root'
@@ -70,6 +65,15 @@ symlinks:
     group:              'root'
     src:                '/usr/local/bin/nethack'
     dest:               '/usr/local/bin/recover'
+adjust_files_insecure:
+  - owner:              'root'
+    group:              'root'
+    mode:               '4755'
+    path:               '/usr/bin/screen'
+  - owner:              'root'
+    group:              'root'
+    mode:               '0755'
+    path:               '/run/screen'
 lines_in_files:
   - dest:               '/etc/bash.bashrc'
     line:               "export NETHACKOPTIONS='@/etc/nethackrc'"

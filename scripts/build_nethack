@@ -1,0 +1,101 @@
+#!/bin/bash
+
+function main() {
+  fix_hints
+  fix_lua
+  # Cannot run "make spotless" until after the hints phase.
+  cleanup
+  build
+}
+
+
+# Probably not necessary with fresh source, but should not hurt.
+function cleanup() {
+  make spotless \
+    || fail "Failed:  'make spotless'" "${?}"
+}
+
+
+# This approach is new.  Instead of fixing every instance of a particular
+# hint name, this should just add a line for each custom hint to the end of
+# the file.  Hopefully last match wins, so that these lines override default
+# values.
+#
+# I'm also going all uppercase for hints names.  I guess they have been case
+# insensitive in the past, and they may still be, but all the names I see in
+# the default hints files are capital, so I am following that example.
+#
+# Finding and fixing or removing default definitions for hint names would be
+# slightly complex.  The default hints file now includes a lot of other files
+# where those values are set.  It would be even more complex to avoid
+# clobbering the default files and replace them with custom versions.
+# Hopefully that is not necessary.
+function fix_hints() {
+  sys_dir='sys/unix'
+  hints_file_default='hints/linux.500'
+  hints_file_custom='hints/custom'
+
+  declare -A hints
+  hints['GAMEUID']='games'
+  hints['GAMEGRP']='games'
+  hints['PREFIX']='/usr/local';
+  hints['CHGRP']='chgrp';
+  hints['CHOWN']='chown';
+  hints['GAMEPERM']='02755';
+  hints['VARDIRPERM']='0775';
+  hints['VARFILEPERM']='0660';
+
+  (
+    cd "${sys_dir}" \
+      || fail "Failed to enter directory:  '${sys_dir}'" "${?}"
+    cp "${hints_file_default}" "${hints_file_custom}" \
+      || fail "Failed to initialize custom hints file." "${?}"
+    for hint_name in "${!hints[@]}"; do
+      hint_value="${hints[${hint_name}]}" \
+        || fail "Failed to look up value for hint name:  '${hint_name}'" "${?}"
+      printf "%s = '%s'"'\n' "${hint_name}" "${hint_value}" \
+        || fail "printf failed for some reason." "${?}"
+    done >> "${hints_file_custom}" \
+      || fail "Failed to add override lines to custom hints file." "${?}"
+    sh ./setup.sh "${hints_file_custom}" \
+      || fail "setup.sh failed." "${?}"
+  ) || fail "Subshell failed during hints configuration."
+}
+
+
+# This downloads lua.  Kind of weird.  New as of nethack 5.0.0, downloading lua
+# 5.4.8.  I wonder if it would be possible to use apt-provided lua instead.
+function fix_lua() {
+  make fetch-lua \
+    || fail "Failed"  'make fetch-lua' "${?}"
+}
+
+
+function build() {
+  make all \
+    || fail "Failed:  'make all'" "${?}"
+}
+
+
+function output() {
+  printf '%s\n' "${1}"
+}
+
+
+function warn() {
+  output "WARNING:  ${1}" >&2
+}
+
+
+function error() {
+  output "ERROR:  ${1}" >&2
+}
+
+
+function fail() {
+  error "${1}"
+  exit "${2:-1}"
+}
+
+
+main "${@}"

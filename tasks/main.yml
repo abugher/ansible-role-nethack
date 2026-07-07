@@ -4,7 +4,7 @@
 - include_tasks:        'tasks/common/unpack_tarballs.yml'
 - include_tasks:        'tasks/common/scripts.yml'
 - include_tasks:        'tasks/common/commands.yml'
-  when:                 scripts_result.changed
+  when:                 scripts_result is defined and scripts_result.changed
 - include_tasks:        'tasks/common/install_files.yml'
 - include_tasks:        'tasks/common/symlinks.yml'
 - include_tasks:        'tasks/common/adjust_files.yml'
