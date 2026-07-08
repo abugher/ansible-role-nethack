@@ -26,13 +26,13 @@ unpack_tarballs:
     dest:               '/usr/local/src'
     creates:            "/usr/local/src/NetHack-{{ major }}.{{ minor }}.{{ patch }}"
 scripts:
-  - script:             'scripts/build_nethack'
+  - script:             "scripts/build_nethack {{ major }} {{ minor }} {{ patch }}"
     chdir:              "/usr/local/src/NetHack-{{ major }}.{{ minor }}.{{ patch }}"
     creates:            "/usr/local/src/NetHack-{{ major }}.{{ minor }}.{{ patch }}/src/nethack"
 commands:
   - command:            'make install'
     chdir:              "/usr/local/src/NetHack-{{ major }}.{{ minor }}.{{ patch }}"
-    creates:            '/usr/local/games/lib/nethackdir/nethack-but-just-overwrite-it'
+    creates:            "/usr/local/games/lib/nethackdir-{{ major }}.{{ minor }}/nethack-but-just-overwrite-it"
     user:               'root'
 install_files:
   - owner:              'root'
@@ -54,7 +54,7 @@ install_files:
     group:              'root'
     mode:               '0755'
     src:                "files/conf/sysconf"
-    dest:               '/usr/local/games/lib/nethackdir/sysconf'
+    dest:               '/usr/local/games/lib/nethackdir-{{ major }}.{{ minor }}/sysconf'
   - owner:              'root'
     group:              'root'
     mode:               '0644'

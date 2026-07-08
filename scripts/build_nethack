@@ -1,6 +1,10 @@
 #!/bin/bash
 
 function main() {
+  major="${1}"
+  minor="${2}"
+  patch="${3}"
+
   fix_hints
   fix_lua
   # Cannot run "make spotless" until after the hints phase.
@@ -35,25 +39,27 @@ function fix_hints() {
   hints_file_default='hints/linux.500'
   hints_file_custom='hints/custom'
 
-  declare -A hints
-  hints['GAMEUID']='games'
-  hints['GAMEGRP']='games'
-  hints['PREFIX']='/usr/local';
-  hints['CHGRP']='chgrp';
-  hints['CHOWN']='chown';
-  hints['GAMEPERM']='02755';
-  hints['VARDIRPERM']='0775';
-  hints['VARFILEPERM']='0660';
+  hints=(
+    "HACKDIR=\$(PREFIX)/games/lib/nethackdir-${major}.${minor}"
+    "VARDIRPERM = '0775'"
+    "GAMEPERM = '02755'"
+    "PREFIX = '/usr/local'"
+    "CHOWN = 'chown'"
+    "VARFILEPERM = '0660'"
+    "GAMEGRP = 'games'"
+    "GAMEUID = 'games'"
+    "CHGRP = 'chgrp'"
+    "NHCFLAGS+=-DSCORE_ON_BOTL"
+  )
+
 
   (
     cd "${sys_dir}" \
       || fail "Failed to enter directory:  '${sys_dir}'" "${?}"
     cp "${hints_file_default}" "${hints_file_custom}" \
       || fail "Failed to initialize custom hints file." "${?}"
-    for hint_name in "${!hints[@]}"; do
-      hint_value="${hints[${hint_name}]}" \
-        || fail "Failed to look up value for hint name:  '${hint_name}'" "${?}"
-      printf "%s = '%s'"'\n' "${hint_name}" "${hint_value}" \
+    for hint in "${hints[@]}"; do
+      printf '%s\n' "${hint}" \
         || fail "printf failed for some reason." "${?}"
     done >> "${hints_file_custom}" \
       || fail "Failed to add override lines to custom hints file." "${?}"

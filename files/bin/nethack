@@ -4,7 +4,7 @@ export NETHACKOPTIONS="@${HOME}/.nethackrc"
 
 nethack='/usr/local/games/nethack'
 version=$(head -n 2 $nethack | tail -n 1 | awk '{print $3}')
-nethackdir='/usr/local/games/lib/nethackdir'
+nethackdir="/usr/local/games/lib/nethackdir-${version}"
 # Registries exist to identify "self" bones, in case we want to skip those.
 bones_registry="${nethackdir}/.bones_registry.${USER}"
 remote_bones_dir="/tmp/bones/${USER}"
