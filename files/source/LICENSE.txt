@@ -1,0 +1,13 @@
+Source code archive files in this directory contain their own licensing
+information.  The license applied to the rest of this repository does
+not apply to those files.  
+
+The license indications within an archive file take precedence over this
+document.  Generally, though, nethack code has been released under the
+NETHACK GENERAL PUBLIC LICENSE, which can be found in a few places:
+
+- in an unpacked source code archive, at:  dat/license
+
+- in this directory, at:  nethack-gpl.txt
+
+- on the web, at:  https://nethack.org/common/license.html
