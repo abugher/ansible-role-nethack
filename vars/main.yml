@@ -56,6 +56,8 @@ commands:
     user:               'root'
   - command:            "rmdir /usr/local/games/lib/nethackdir-{{ major }}.{{ minor }}-preserve"
     user:               'root'
+  - command:            "mv /usr/local/games/nethack /usr/local/games/nethack-{{ major }}.{{ minor }}.{{ patch }}"
+    user:               'root'
 install_files:
   - owner:              'root'
     group:              'root'
@@ -87,6 +89,10 @@ symlinks:
     group:              'root'
     src:                '/usr/local/bin/nethack'
     dest:               '/usr/local/bin/recover'
+  - owner:              'root'
+    group:              'root'
+    src:                "/usr/local/games/nethack-{{ major }}.{{ minor }}.{{ patch }}"
+    dest:               '/usr/local/games/nethack'
 adjust_files_insecure:
   - owner:              'root'
     group:              'root'

@@ -13,3 +13,11 @@
   when:                 "'insecure' in group_names"
 - include_tasks:        'tasks/common/lines_in_files.yml'
 - include_tasks:        'tasks/common/known_hosts.yml'
+- include_tasks:        'tasks/common/add_users_to_groups.yml'
+  vars:
+    add_users_to_groups:
+      - user:           "{{ nethack_user }}"
+        groups:         'games'
+  loop:                 "{{ nethack_users }}"
+  loop_control:
+    loop_var:           'nethack_user'
