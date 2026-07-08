@@ -30,9 +30,31 @@ scripts:
     chdir:              "/usr/local/src/NetHack-{{ major }}.{{ minor }}.{{ patch }}"
     creates:            "/usr/local/src/NetHack-{{ major }}.{{ minor }}.{{ patch }}/src/nethack"
 commands:
+  - command:            "mkdir /usr/local/games/lib/nethackdir-{{ major }}.{{ minor }}-preserve"
+    creates:            "/usr/local/games/lib/nethackdir-{{ major }}.{{ minor }}-preserve"
+    user:               'root'
+  - command:            "mkdir /usr/local/games/lib/nethackdir-{{ major }}.{{ minor }}-preserve/save"
+    creates:            "/usr/local/games/lib/nethackdir-{{ major }}.{{ minor }}-preserve/save"
+    user:               'root'
+  - command:            "sh -c 'mv /usr/local/games/lib/nethackdir-{{ major }}.{{ minor }}/save/* /usr/local/games/lib/nethackdir-{{ major }}.{{ minor }}-preserve/save/'"
+    failed_when:        False
+    user:               'root'
+  - command:            "sh -c 'mv /usr/local/games/lib/nethackdir-{{ major }}.{{ minor }}/bon* /usr/local/games/lib/nethackdir-{{ major }}.{{ minor }}-preserve/'"
+    failed_when:        False
+    user:               'root'
   - command:            'make install'
     chdir:              "/usr/local/src/NetHack-{{ major }}.{{ minor }}.{{ patch }}"
     creates:            "/usr/local/games/lib/nethackdir-{{ major }}.{{ minor }}/nethack-but-just-overwrite-it"
+    user:               'root'
+  - command:            "sh -c 'mv /usr/local/games/lib/nethackdir-{{ major }}.{{ minor }}-preserve/bon* /usr/local/games/lib/nethackdir-{{ major }}.{{ minor }}/'"
+    failed_when:        False
+    user:               'root'
+  - command:            "sh -c 'mv /usr/local/games/lib/nethackdir-{{ major }}.{{ minor }}-preserve/save/* /usr/local/games/lib/nethackdir-{{ major }}.{{ minor }}/save/'"
+    failed_when:        False
+    user:               'root'
+  - command:            "rmdir /usr/local/games/lib/nethackdir-{{ major }}.{{ minor }}-preserve/save"
+    user:               'root'
+  - command:            "rmdir /usr/local/games/lib/nethackdir-{{ major }}.{{ minor }}-preserve"
     user:               'root'
 install_files:
   - owner:              'root'
