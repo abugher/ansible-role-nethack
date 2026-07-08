@@ -33,17 +33,23 @@ contain incompatibilities or buggy data.
 
 ### Preserve Old Nethack Versions
 
+WARNING:  This behavior was introduced around the release of nethack 5.0.0.
+Earlier versions installed by this role will not benefit from this feature, and
+will probably become unplayable when the role is redeployed.
+
 The `nethack` executable file installed by this role will be immediately
 renamed with the full version number.  A symlink to that versioned executable
 will be put in place of the executable.  Future deployments of different
 versions should create new versioned executables and replace the symlink.  Old
 versioned executables should be left in place.
 
-In concept, this means one should be able to play old versions of nethack, but
-this needs experimentation.  Right now, it is probably necessary to adjust the
-symlink to point to the desired version of the game.  Later, the wrapper script
-may be improved to run a requested version without having to mess with a
-root-owned symlink.
+An old version of nethack can be played, complete with any old save and bones
+files, by specifying the full version number:
+
+    /usr/local/bin/nethack 5.0.0
+
+Without that argument, the most recently installed version of nethack will be
+launched.
 
 ## Install Wrapper
 
@@ -141,6 +147,3 @@ first steps:
     * Currently, if a bones file is created for one user on one host, it will be added to that user's registry, and if it is consumed by that same user, it will be removed from the registry, but if it is consumed by a different user, the entry will remain forever in the first user's registry.  
     * Maybe a shared registry on the bones server with fields for user and host would solve this.  
     * Modern computers are big, text files are small, and humans are slow, so this bug should be very low impact.
-* The launch script should take a version argument and launch the appropriate executable.
-    * Old saves and bones could still be used this way, even after a newer version is installed.
-    * The versioned executable system is now in place, but the wrapper still needs modification.

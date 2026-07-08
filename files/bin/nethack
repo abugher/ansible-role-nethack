@@ -1,34 +1,55 @@
 #!/bin/bash
 
-export NETHACKOPTIONS="@${HOME}/.nethackrc"
 
-nethack='/usr/local/games/nethack'
-version=$(head -n 2 $nethack | tail -n 1 | awk '{print $3}')
-nethackdir="/usr/local/games/lib/nethackdir-${version}"
-# Registries exist to identify "self" bones, in case we want to skip those.
-bones_registry="${nethackdir}/.bones_registry.${USER}"
-remote_bones_dir="/tmp/bones/${USER}"
-version_dir="${remote_bones_dir}/${version}"
-remote_bones_url="cryptkeeper@neuron.neuronpointer.net:bones"
-lock_dir=".lock_dir"
-remote_uid='995'
-remote_gid='992'
-checked_out_bones_files=()
-declare -A checked_out_bones_entries
-lock_timeout=10
-locks=()
-fail_recursion_count=0
-self_short_name="$(sed 's/^.*\///g' <<< "${0}")"
-if type mesg 2>/dev/null; then
-  mesg_available='yes'
-  if mesg > /dev/null; then 
-    mesg_status='y'
+function main() {
+  # patch version, x.y.z
+  requested_version="${1}"
+  export NETHACKOPTIONS="@${HOME}/.nethackrc"
+  if test '' == "${requested_version}"; then
+    nethack="/usr/local/games/nethack"
   else
-    mesg_status='n'
+    nethack="/usr/local/games/nethack-${requested_version}"
   fi
-else
-  mesg_available='no'
-fi
+  if ! test -e "${nethack}"; then
+    fail "No nethack executable file found at:  '${nethack}'"
+  fi
+  # minor version, x.y
+  version=$(head -n 2 $nethack | tail -n 1 | awk '{print $3}')
+  nethackdir="/usr/local/games/lib/nethackdir-${version}"
+  # Registries exist to identify "self" bones, in case we want to skip those.
+  bones_registry="${nethackdir}/.bones_registry.${USER}"
+  remote_bones_dir="/tmp/bones/${USER}"
+  version_dir="${remote_bones_dir}/${version}"
+  remote_bones_url="cryptkeeper@neuron.neuronpointer.net:bones"
+  lock_dir=".lock_dir"
+  checked_out_bones_files=()
+  declare -A checked_out_bones_entries
+  lock_timeout=10
+  locks=()
+  fail_recursion_count=0
+  self_short_name="$(sed 's/^.*\///g' <<< "${0}")"
+  if type mesg 2>/dev/null; then
+    mesg_available='yes'
+    if mesg > /dev/null; then 
+      mesg_status='y'
+    else
+      mesg_status='n'
+    fi
+  else
+    mesg_available='no'
+  fi
+
+  case "${self_short_name}" in
+    nethack)
+      play
+      ;;
+    recover)
+      recover
+      ;;
+    *)
+      fail "I don't know how to be '${self_short_name}'.  I'm more of a nethack kind of script." 1
+  esac
+}
 
 
 play() {
@@ -436,13 +457,4 @@ bones_entry() {
 }
 
 
-case "${self_short_name}" in
-  nethack)
-    play
-    ;;
-  recover)
-    recover
-    ;;
-  *)
-    fail "I don't know how to be '${self_short_name}'.  I'm more of a nethack kind of script." 1
-esac
+main "${@}"
